@@ -1507,7 +1507,7 @@ add_action( 'woocommerce_created_customer', 'libresign_save_registration_policy_
  * Send newly registered users to their WooCommerce account area.
  */
 function libresign_registration_redirect_to_account( $redirect ) {
-	return libresign_get_account_url();
+	return libresign_get_purchase_redirect_target();
 }
 add_filter( 'woocommerce_registration_redirect', 'libresign_registration_redirect_to_account', 10, 1 );
 
@@ -1515,9 +1515,28 @@ add_filter( 'woocommerce_registration_redirect', 'libresign_registration_redirec
  * Send authenticated users to the account dashboard after login.
  */
 function libresign_login_redirect_to_account( $redirect, $user ) {
-	return libresign_get_account_url();
+	return libresign_get_purchase_redirect_target();
 }
 add_filter( 'woocommerce_login_redirect', 'libresign_login_redirect_to_account', 10, 2 );
+
+/**
+ * Preserve the intended destination after authentication when coming from a product page.
+ */
+function libresign_get_purchase_redirect_target() {
+	$redirect_to = '';
+
+	if ( isset( $_REQUEST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$redirect_to = wp_unslash( $_REQUEST['redirect_to'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	$redirect_to = wp_validate_redirect( $redirect_to, '' );
+
+	if ( '' !== $redirect_to ) {
+		return $redirect_to;
+	}
+
+	return libresign_get_account_url();
+}
 
 /**
  * Resolve the canonical account URL.
@@ -1726,7 +1745,7 @@ function libresign_get_guest_purchase_checkout_url() {
 function libresign_get_guest_purchase_cta( $label = '' ) {
 	$account_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/account/' );
 	$redirect_to  = rawurlencode( libresign_get_guest_purchase_checkout_url() );
-	$button_label = '' !== $label ? $label : __( 'Entrar para assinar', 'libresign' );
+	$button_label = '' !== $label ? $label : __( 'Contratar', 'libresign' );
 	$notice       = __( 'Crie sua conta ou entre para continuar com a compra.', 'libresign' );
 
 	return sprintf(
