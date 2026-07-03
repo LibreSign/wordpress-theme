@@ -412,6 +412,16 @@ function libresign_is_lost_password_request() {
 }
 
 /**
+ * Detect the direct /lost-password/ route used outside the WooCommerce account page.
+ */
+function libresign_is_direct_lost_password_route() {
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+	$path        = wp_parse_url( $request_uri, PHP_URL_PATH );
+
+	return '/lost-password/' === $path || '/lost-password' === $path;
+}
+
+/**
  * Render the lost-password form used on the account endpoint.
  */
 function libresign_render_lost_password_form() {
@@ -552,6 +562,26 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 	return $account_store_preview . $content;
 }
 add_filter( 'the_content', 'libresign_prepend_saas_onboarding_to_content', 5 );
+
+/**
+ * Render the lost-password page directly when the route is visited outside the account page.
+ */
+function libresign_render_direct_lost_password_route() {
+	if ( is_admin() || wp_doing_ajax() || ! libresign_is_direct_lost_password_route() ) {
+		return;
+	}
+
+	status_header( 200 );
+	nocache_headers();
+
+	get_header();
+	echo '<main class="wp-block-group" style="margin-top:0">';
+	libresign_render_lost_password_form();
+	echo '</main>';
+	get_footer();
+	exit;
+}
+add_action( 'template_redirect', 'libresign_render_direct_lost_password_route', 1 );
 
 /**
  * Print account-page-specific styles inline so cache and specificity do not hide them.
