@@ -13,3 +13,98 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: libresign
 Tags: one-column, custom-colors, custom-menu, custom-logo, editor-style, featured-images, full-site-editing, block-patterns, rtl-language-support, sticky-post, threaded-comments, translation-ready, wide-blocks, block-styles, style-variations, accessibility-ready, blog, portfolio, news
 */
+
+.libresign-account-store-preview {
+	margin: 2rem 0 3rem;
+	padding: clamp(1.25rem, 2vw, 2.25rem);
+	border: 1px solid rgba(15, 23, 42, 0.05);
+	border-radius: 28px;
+	background:
+		radial-gradient(circle at top left, rgba(224, 242, 231, 0.6), transparent 34%),
+		radial-gradient(circle at bottom right, rgba(253, 230, 138, 0.18), transparent 28%),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(250, 248, 244, 0.995));
+	box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+.libresign-account-store-preview__header {
+	max-width: 52rem;
+	margin-bottom: 1.5rem;
+}
+
+.libresign-account-store-preview__eyebrow {
+	margin-bottom: 0.4rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #0f766e;
+}
+
+.libresign-account-store-preview__header h2 {
+	margin: 0 0 0.5rem;
+	font-size: clamp(1.5rem, 3vw, 2.25rem);
+	line-height: 1.1;
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	color: #0f172a;
+}
+
+.libresign-account-store-preview__header p {
+	margin: 0;
+	max-width: 46rem;
+	color: #1e293b;
+	font-size: 1.02rem;
+	line-height: 1.7;
+}
+
+.libresign-account-store-preview .woocommerce ul.products {
+	margin-bottom: 0;
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product {
+	margin-bottom: 1.75rem;
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product a {
+	transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product a:hover {
+	transform: translateY(-2px);
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product .woocommerce-loop-product__title {
+	margin-top: 0.7rem;
+	font-size: 1.05rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	line-height: 1.35;
+	color: #0f172a;
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product .price {
+	margin-top: 0.4rem;
+	font-size: 0.98rem;
+	font-weight: 700;
+	color: #0f766e;
+}
+
+.libresign-account-store-preview .woocommerce ul.products li.product .button {
+	font-size: 0.95rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+.libresign-account-store-preview__footer {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 1rem;
+}
+
+.libresign-account-store-preview__footer .button {
+	border-radius: 999px;
+	padding: 0.85rem 1.35rem;
+	box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
