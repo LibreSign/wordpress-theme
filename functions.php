@@ -303,6 +303,7 @@ function libresign_render_account_store_preview() {
 function libresign_render_account_login_forms( $active_tab = 'register' ): void {
 	$show_registration = 'yes' === get_option( 'woocommerce_enable_myaccount_registration' );
 	$account_url       = libresign_get_account_url();
+	$lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url();
 	?>
 	<div class="libresign-account-shell__panels">
 		<section class="libresign-account-shell__panel<?php echo 'login' === $active_tab ? ' is-active' : ''; ?>" data-libresign-panel="login" role="tabpanel">
@@ -330,7 +331,7 @@ function libresign_render_account_login_forms( $active_tab = 'register' ): void 
 					<button type="submit" class="woocommerce-button button woocommerce-form-login__submit<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>" name="login" value="Entrar">Entrar</button>
 				</p>
 				<p class="woocommerce-LostPassword lost_password">
-					<a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Esqueceu a senha?</a>
+					<a href="<?php echo esc_url( $lost_password_url ); ?>">Esqueceu a senha?</a>
 				</p>
 			</form>
 		</section>
@@ -396,6 +397,84 @@ function libresign_render_account_login_forms( $active_tab = 'register' ): void 
 }
 
 /**
+ * Detect if the current request targets the WooCommerce lost-password endpoint.
+ */
+function libresign_is_lost_password_request() {
+	if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'lost-password' ) ) {
+		return true;
+	}
+
+	if ( isset( $_GET['action'] ) && 'lostpassword' === sanitize_key( wp_unslash( $_GET['action'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Render the lost-password form used on the account endpoint.
+ */
+function libresign_render_lost_password_form() {
+	$lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url();
+	$account_url       = libresign_get_account_url();
+	?>
+	<section class="libresign-account-shell" id="libresign-account-shell">
+		<aside class="libresign-account-shell__aside">
+			<div class="libresign-account-shell__brand">
+				<div class="libresign-account-shell__mark" aria-hidden="true">L</div>
+				<div>
+					<p class="libresign-account-shell__brand-name">LibreSign</p>
+				</div>
+			</div>
+
+			<div class="libresign-account-shell__hero">
+				<p class="libresign-account-shell__eyebrow">Acesso</p>
+				<h2>Recuperar senha</h2>
+				<p>Informe seu e-mail ou usuário para receber o link de redefinição de senha.</p>
+			</div>
+		</aside>
+
+		<main class="libresign-account-shell__main" tabindex="-1">
+			<div class="libresign-account-shell__tabs" role="tablist" aria-label="Acesso LibreSign">
+				<a class="libresign-account-shell__tab is-active" href="<?php echo esc_url( $account_url ); ?>">Entrar</a>
+				<a class="libresign-account-shell__tab" href="<?php echo esc_url( $lost_password_url ); ?>" aria-selected="true">Esqueci a senha</a>
+			</div>
+
+			<div class="libresign-account-shell__panels">
+				<section class="libresign-account-shell__panel is-active" data-libresign-panel="lost-password" role="tabpanel">
+					<div class="libresign-account-shell__panel-header">
+						<p class="libresign-account-shell__eyebrow">Esqueci a senha</p>
+						<h2>Enviar link de redefinição</h2>
+						<p>Se sua conta existir, enviaremos um e-mail com o próximo passo.</p>
+					</div>
+
+					<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
+						<div class="libresign-account-shell__notices">
+							<?php wc_print_notices(); ?>
+						</div>
+					<?php endif; ?>
+
+					<form method="post" class="woocommerce-form woocommerce-form-login login lost_reset_password">
+						<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+							<label for="user_login">E-mail ou usuário&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
+							<input type="text" name="user_login" id="user_login" class="woocommerce-Input woocommerce-Input--text input-text" autocomplete="username" required aria-required="true" />
+						</p>
+
+						<input type="hidden" name="wc_reset_password" value="true" />
+						<?php wp_nonce_field( 'lost_password', 'woocommerce-lost-password-nonce' ); ?>
+
+						<p class="form-row">
+							<button type="submit" class="woocommerce-button button woocommerce-form-login__submit">Enviar link</button>
+						</p>
+					</form>
+				</section>
+			</div>
+		</main>
+	</section>
+	<?php
+}
+
+/**
  * Render the active shop products on the account page.
  */
 function libresign_render_account_plans_list() {
@@ -431,6 +510,12 @@ add_filter( 'the_content', 'libresign_disable_wpautop_on_account_page', 0 );
 function libresign_prepend_saas_onboarding_to_content( $content ) {
 	if ( is_admin() || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
+	}
+
+	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
+		ob_start();
+		libresign_render_lost_password_form();
+		return ob_get_clean();
 	}
 
 	if ( function_exists( 'is_account_page' ) && is_account_page() && is_user_logged_in() ) {
