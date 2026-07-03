@@ -444,7 +444,7 @@ function libresign_render_lost_password_form() {
 			</div>
 
 			<div class="libresign-account-shell__actions">
-				<a class="button button-primary" href="<?php echo esc_url( $account_url ); ?>#libresign-account-shell" data-libresign-open-tab="register">Criar workspace grátis</a>
+				<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'tab', 'register', $account_url ) ); ?>#libresign-account-shell" data-libresign-open-tab="register">Criar workspace grátis</a>
 				<a class="button" href="<?php echo esc_url( $account_url ); ?>">Voltar para entrar</a>
 			</div>
 		</aside>
@@ -1327,11 +1327,15 @@ function libresign_account_store_preview_toggle_script() {
 					if (event) {
 						event.preventDefault();
 					}
+
+					if (!targetPanel) {
+						window.location.href = opener.href;
+						return;
+					}
+
 					activateTab(tabName, false);
 					shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
-					if (targetPanel) {
-						focusPanel(targetPanel);
-					}
+					focusPanel(targetPanel);
 				});
 			});
 
