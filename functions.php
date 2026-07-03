@@ -1746,11 +1746,9 @@ function libresign_get_guest_purchase_cta( $label = '' ) {
 	$account_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/account/' );
 	$redirect_to  = rawurlencode( libresign_get_guest_purchase_checkout_url() );
 	$button_label = '' !== $label ? $label : __( 'Contratar', 'libresign' );
-	$notice       = __( 'Crie sua conta ou entre para continuar com a compra.', 'libresign' );
 
 	return sprintf(
-		'<div class="libresign-guest-purchase-cta" style="display:grid;gap:.75rem;justify-items:start;margin-top:.5rem;"><p style="margin:0;">%s</p><a class="wp-block-button__link wp-element-button" href="%s">%s</a></div>',
-		esc_html( $notice ),
+		'<div class="libresign-guest-purchase-cta" style="display:grid;justify-items:start;margin-top:.5rem;"><a class="wp-block-button__link wp-element-button" href="%s">%s</a></div>',
 		esc_url( add_query_arg( 'redirect_to', $redirect_to, $account_url ) ),
 		esc_html( $button_label )
 	);
