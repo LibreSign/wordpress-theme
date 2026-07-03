@@ -1651,9 +1651,81 @@ add_action( 'template_redirect', 'libresign_redirect_guests_from_purchase_flow',
 /**
  * Build the account CTA used for guests in product purchase areas.
  */
+function libresign_get_guest_purchase_checkout_url() {
+	$checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
+
+	if ( ! function_exists( 'is_product' ) || ! is_product() || ! function_exists( 'wc_get_product' ) ) {
+		return $checkout_url;
+	}
+
+	$product_id = get_queried_object_id();
+	$product    = wc_get_product( $product_id );
+
+	if ( ! $product ) {
+		return $checkout_url;
+	}
+
+	$add_to_cart_args = array(
+		'add-to-cart' => $product->get_id(),
+	);
+
+	if ( $product->is_type( 'variable' ) ) {
+		$selected_attributes = array();
+		$default_attributes  = $product->get_default_attributes();
+
+		foreach ( $default_attributes as $attribute_name => $attribute_value ) {
+			if ( '' === (string) $attribute_value ) {
+				continue;
+			}
+
+			$selected_attributes[ 'attribute_' . sanitize_title( $attribute_name ) ] = (string) $attribute_value;
+		}
+
+		if ( ! empty( $selected_attributes ) ) {
+			$matching_variation_id = 0;
+
+			foreach ( $product->get_children() as $variation_id ) {
+				$variation = wc_get_product( $variation_id );
+
+				if ( ! $variation ) {
+					continue;
+				}
+
+				$variation_attributes = $variation->get_attributes();
+				$is_match             = true;
+
+				foreach ( $default_attributes as $attribute_name => $attribute_value ) {
+					if ( '' === (string) $attribute_value ) {
+						continue;
+					}
+
+					$variation_key = sanitize_title( $attribute_name );
+
+					if ( ! isset( $variation_attributes[ $variation_key ] ) || (string) $variation_attributes[ $variation_key ] !== (string) $attribute_value ) {
+						$is_match = false;
+						break;
+					}
+				}
+
+				if ( $is_match ) {
+					$matching_variation_id = $variation_id;
+					break;
+				}
+			}
+
+			if ( $matching_variation_id ) {
+				$add_to_cart_args['variation_id'] = $matching_variation_id;
+				$add_to_cart_args = array_merge( $add_to_cart_args, $selected_attributes );
+			}
+		}
+	}
+
+	return add_query_arg( $add_to_cart_args, $checkout_url );
+}
+
 function libresign_get_guest_purchase_cta( $label = '' ) {
 	$account_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/account/' );
-	$redirect_to  = rawurlencode( home_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ) );
+	$redirect_to  = rawurlencode( libresign_get_guest_purchase_checkout_url() );
 	$button_label = '' !== $label ? $label : __( 'Entrar para assinar', 'libresign' );
 	$notice       = __( 'Crie sua conta ou entre para continuar com a compra.', 'libresign' );
 
