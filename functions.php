@@ -442,6 +442,11 @@ function libresign_render_lost_password_form() {
 				<h2>Recuperar senha</h2>
 				<p>Informe seu e-mail ou usuário para receber o link de redefinição de senha.</p>
 			</div>
+
+			<div class="libresign-account-shell__actions">
+				<a class="button button-primary" href="<?php echo esc_url( $account_url ); ?>#libresign-account-shell" data-libresign-open-tab="register">Criar workspace grátis</a>
+				<a class="button" href="<?php echo esc_url( $account_url ); ?>">Voltar para entrar</a>
+			</div>
 		</aside>
 
 		<main class="libresign-account-shell__main" tabindex="-1">
