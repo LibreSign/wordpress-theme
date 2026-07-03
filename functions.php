@@ -258,6 +258,7 @@ function libresign_render_account_store_preview() {
 function libresign_render_account_login_forms( $active_tab = 'register' ): void {
 	$show_registration = 'yes' === get_option( 'woocommerce_enable_myaccount_registration' );
 	$account_url       = libresign_get_account_url();
+	$redirect_to       = libresign_get_purchase_redirect_target();
 	$lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url();
 	?>
 	<div class="libresign-account-shell__panels">
@@ -282,7 +283,7 @@ function libresign_render_account_login_forms( $active_tab = 'register' ): void 
 						<input class="woocommerce-form__input woocommerce-form__input-checkbox" name="rememberme" type="checkbox" id="rememberme" value="forever" /> <span>Lembrar de mim</span>
 					</label>
 					<?php wp_nonce_field( 'woocommerce-login', 'woocommerce-login-nonce' ); ?>
-					<input type="hidden" name="redirect" value="<?php echo esc_url( $account_url ); ?>" />
+					<input type="hidden" name="redirect" value="<?php echo esc_url( $redirect_to ); ?>" />
 					<button type="submit" class="woocommerce-button button woocommerce-form-login__submit<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>" name="login" value="Entrar">Entrar</button>
 				</p>
 				<p class="woocommerce-LostPassword lost_password">
@@ -339,7 +340,7 @@ function libresign_render_account_login_forms( $active_tab = 'register' ): void 
 					</p>
 
 					<?php wp_nonce_field( 'woocommerce-register', 'woocommerce-register-nonce' ); ?>
-					<input type="hidden" name="redirect" value="<?php echo esc_url( $account_url ); ?>" />
+					<input type="hidden" name="redirect" value="<?php echo esc_url( $redirect_to ); ?>" />
 
 					<p class="form-row">
 						<button type="submit" class="woocommerce-Button button woocommerce-button<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?> woocommerce-form-register__submit" name="register" value="Criar workspace">Criar workspace</button>
