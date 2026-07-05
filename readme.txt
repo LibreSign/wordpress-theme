@@ -10,7 +10,29 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 == Description ==
 
-Nosso tema
+Tema WordPress do LibreSign.
+
+== Footer integration ==
+
+This theme can render the shared footer published by the static LibreSign site.
+
+Configure it in:
+
+- `Appearance > Customize > Footer integration`
+
+Use `Footer fragment origins` to define one or more origins.
+
+Priority:
+
+1. Theme configuration in the Customizer
+2. Environment variables
+3. Default fallback: `https://libresign.coop`
+
+== Development notes ==
+
+- Footer integration bootstrap: `inc/footer-fragment.php`
+- Main theme bootstrap: `functions.php`
+- Static site fragment path: `/fragments/footer/`
 
 
 == Changelog ==
