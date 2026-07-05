@@ -20,19 +20,31 @@ Configure it in:
 
 - `Appearance > Customize > Footer integration`
 
-Use `Footer fragment origins` to define one or more origins.
+Use the theme settings to configure:
+
+- `Footer webhook secret`
+- `Allowed webhook IPs` (optional)
 
 Priority:
 
-1. Theme configuration in the Customizer
-2. Environment variables
-3. Default fallback: `https://libresign.coop`
+1. Static site build pushes footer artifacts to the webhook endpoint
+2. Theme renders the last stored local artifact
+3. If nothing was stored yet, the theme falls back to the original footer template part
+
+Webhook endpoint:
+
+- `/wp-json/libresign/v1/footer-fragment`
+
+The static site build must provide:
+
+- `LIBRESIGN_FOOTER_WEBHOOK_URL`
+- `LIBRESIGN_FOOTER_WEBHOOK_SECRET`
 
 == Development notes ==
 
 - Footer integration bootstrap: `inc/footer-fragment.php`
 - Main theme bootstrap: `functions.php`
-- Static site fragment path: `/fragments/footer/`
+- Static site fragment source path: `/fragments/footer/`
 
 
 == Changelog ==
