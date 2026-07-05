@@ -280,11 +280,11 @@ function libresign_footer_fragment_receive_webhook( $request ) {
 		return new \WP_Error( 'libresign_footer_ip_denied', __( 'Webhook source IP is not allowed.', 'libresign' ), array( 'status' => 403 ) );
 	}
 
-	if ( ! libresign_footer_fragment_check_rate_limit( $ip ) ) {
+	$body      = (string) $request->get_body();
+
+	if ( ! libresign_footer_fragment_check_rate_limit( $ip, $body ) ) {
 		return new \WP_Error( 'libresign_footer_rate_limited', __( 'Too many footer webhook requests.', 'libresign' ), array( 'status' => 429 ) );
 	}
-
-	$body      = (string) $request->get_body();
 	$timestamp = (string) $request->get_header( 'x-libresign-timestamp' );
 	$signature = (string) $request->get_header( 'x-libresign-signature' );
 
@@ -676,10 +676,11 @@ function libresign_footer_fragment_ip_matches_cidr( $ip, $cidr ) {
  * Simple webhook rate-limit gate.
  *
  * @param string $ip Source IP.
+ * @param string $body Raw request body.
  * @return bool
  */
-function libresign_footer_fragment_check_rate_limit( $ip ) {
-	$key = 'libresign_footer_webhook_rl_' . md5( $ip ?: 'unknown' );
+function libresign_footer_fragment_check_rate_limit( $ip, $body ) {
+	$key = 'libresign_footer_webhook_rl_' . md5( ($ip ?: 'unknown') . '|' . hash( 'sha256', (string) $body ) );
 	if ( get_transient( $key ) ) {
 		return false;
 	}
