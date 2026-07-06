@@ -10,7 +10,41 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 == Description ==
 
-Nosso tema
+Tema WordPress do LibreSign.
+
+== Footer integration ==
+
+This theme can render the shared footer published by the static LibreSign site.
+
+Configure it in:
+
+- `Appearance > Customize > Footer integration`
+
+Use the theme settings to configure:
+
+- `Footer webhook secret`
+- `Allowed webhook IPs` (optional)
+
+Priority:
+
+1. Static site build pushes footer artifacts to the webhook endpoint
+2. Theme renders the last stored local artifact
+3. If nothing was stored yet, the theme falls back to the original footer template part
+
+Webhook endpoint:
+
+- `/wp-json/libresign/v1/footer-fragment`
+
+The static site build must provide:
+
+- `LIBRESIGN_FOOTER_WEBHOOK_URL`
+- `LIBRESIGN_FOOTER_WEBHOOK_SECRET`
+
+== Development notes ==
+
+- Footer integration bootstrap: `inc/footer-fragment.php`
+- Main theme bootstrap: `functions.php`
+- Static site fragment source path: `/fragments/footer/`
 
 
 == Changelog ==
