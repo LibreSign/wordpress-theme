@@ -298,18 +298,63 @@ function libresign_render_account_store_preview() {
 		return '';
 	}
 
+	$shop_url = wc_get_page_permalink( 'shop' );
+
+	if ( empty( $shop_url ) ) {
+		$shop_url = home_url( '/store/' );
+	}
+
+	$active_tab = libresign_get_account_active_tab();
+
 	ob_start();
 	?>
-	<section class="libresign-account-store-preview" id="libresign-account-shell">
-		<div class="libresign-account-store-preview__header">
-			<p class="libresign-account-store-preview__eyebrow">Planos disponíveis</p>
-			<h2>Escolha um plano</h2>
-			<p>Veja abaixo a listagem dos produtos disponíveis para contratação.</p>
-		</div>
+	<section class="libresign-account-shell" id="libresign-account-shell">
+		<aside class="libresign-account-shell__aside">
+			<div class="libresign-account-shell__brand">
+				<div class="libresign-account-shell__mark" aria-hidden="true">L</div>
+				<div>
+					<p class="libresign-account-shell__brand-name">LibreSign</p>
+				</div>
+			</div>
 
-		<div class="libresign-account-store-preview__products">
-			<?php echo libresign_render_account_plans_list(); ?>
-		</div>
+			<div class="libresign-account-shell__hero">
+				<p class="libresign-account-shell__eyebrow">Workspace + planos</p>
+				<h2>Crie seu workspace e comece a assinar documentos</h2>
+				<p>Escolha um plano, crie sua conta e siga no fluxo certo. Tudo em uma tela, sem quebra de contexto.</p>
+			</div>
+
+			<div class="libresign-account-shell__plans">
+				<p class="libresign-account-shell__section-label">Planos disponíveis</p>
+				<div class="libresign-account-shell__plans-list">
+					<?php echo libresign_render_account_plans_list(); ?>
+				</div>
+			</div>
+
+			<div class="libresign-account-shell__trust">
+				<span class="libresign-account-shell__trust-dot" aria-hidden="true"></span>
+				<span>Open source · Dados no Brasil · Cooperativa</span>
+			</div>
+
+			<div class="libresign-account-shell__actions">
+				<a class="button button-primary" href="#libresign-account-shell" data-libresign-open-tab="register">Criar workspace grátis</a>
+				<a class="button" href="<?php echo esc_url( $shop_url ); ?>">Ver planos</a>
+			</div>
+		</aside>
+
+		<main class="libresign-account-shell__main" tabindex="-1">
+			<div class="libresign-account-shell__tabs" role="tablist" aria-label="Acesso LibreSign">
+				<button type="button" class="libresign-account-shell__tab<?php echo 'register' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="register" role="tab" aria-selected="<?php echo 'register' === $active_tab ? 'true' : 'false'; ?>">Criar workspace</button>
+				<button type="button" class="libresign-account-shell__tab<?php echo 'login' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="login" role="tab" aria-selected="<?php echo 'login' === $active_tab ? 'true' : 'false'; ?>">Já tenho acesso</button>
+			</div>
+
+			<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
+				<div class="libresign-account-shell__notices">
+					<?php wc_print_notices(); ?>
+				</div>
+			<?php endif; ?>
+
+			<?php libresign_render_account_login_forms( $active_tab ); ?>
+		</main>
 	</section>
 	<?php
 	return ob_get_clean();
