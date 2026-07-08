@@ -298,18 +298,52 @@ function libresign_render_account_store_preview() {
 		return '';
 	}
 
+	$active_tab = libresign_get_account_active_tab();
+
 	ob_start();
 	?>
-	<section class="libresign-account-store-preview" id="libresign-account-shell">
-		<div class="libresign-account-store-preview__header">
-			<p class="libresign-account-store-preview__eyebrow">Planos disponíveis</p>
-			<h2>Escolha um plano</h2>
-			<p>Veja abaixo a listagem dos produtos disponíveis para contratação.</p>
-		</div>
+	<section class="libresign-account-shell" id="libresign-account-shell">
+		<aside class="libresign-account-shell__aside">
+			<div class="libresign-account-shell__brand">
+				<div class="libresign-account-shell__mark" aria-hidden="true">L</div>
+				<div>
+					<p class="libresign-account-shell__brand-name">LibreSign</p>
+				</div>
+			</div>
 
-		<div class="libresign-account-store-preview__products">
-			<?php echo libresign_render_account_plans_list(); ?>
-		</div>
+			<div class="libresign-account-shell__hero">
+				<p class="libresign-account-shell__eyebrow">Workspace + planos</p>
+				<h2>Crie seu workspace e comece a assinar documentos</h2>
+				<p>Escolha um plano, crie sua conta e siga no fluxo certo. Tudo em uma tela, sem quebra de contexto.</p>
+			</div>
+
+			<div class="libresign-account-shell__plans">
+				<p class="libresign-account-shell__section-label">Planos disponíveis</p>
+				<div class="libresign-account-shell__plans-list">
+					<?php echo libresign_render_account_plans_list(); ?>
+				</div>
+			</div>
+
+			<div class="libresign-account-shell__trust">
+				<span class="libresign-account-shell__trust-dot" aria-hidden="true"></span>
+				<span>Open source · Dados no Brasil · Cooperativa</span>
+			</div>
+		</aside>
+
+		<main class="libresign-account-shell__main" tabindex="-1">
+			<div class="libresign-account-shell__tabs" role="tablist" aria-label="Acesso LibreSign">
+				<button type="button" class="libresign-account-shell__tab<?php echo 'register' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="register" role="tab" aria-selected="<?php echo 'register' === $active_tab ? 'true' : 'false'; ?>">Criar workspace</button>
+				<button type="button" class="libresign-account-shell__tab<?php echo 'login' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="login" role="tab" aria-selected="<?php echo 'login' === $active_tab ? 'true' : 'false'; ?>">Já tenho acesso</button>
+			</div>
+
+			<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
+				<div class="libresign-account-shell__notices">
+					<?php wc_print_notices(); ?>
+				</div>
+			<?php endif; ?>
+
+			<?php libresign_render_account_login_forms( $active_tab ); ?>
+		</main>
 	</section>
 	<?php
 	return ob_get_clean();
@@ -890,8 +924,9 @@ function libresign_account_store_preview_head_styles() {
 		.libresign-account-shell {
 			display: grid;
 			grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+			max-width: 1120px;
 			min-height: 640px;
-			margin: 2rem 0 3rem;
+			margin: 2rem auto 3rem;
 			border: 1px solid rgba(17, 24, 39, 0.08);
 			border-radius: 30px;
 			overflow: hidden;
@@ -903,7 +938,7 @@ function libresign_account_store_preview_head_styles() {
 			position: relative;
 			display: flex;
 			flex-direction: column;
-			justify-content: space-between;
+			justify-content: flex-start;
 			min-height: 100%;
 			height: 100%;
 			gap: 1.5rem;
@@ -984,7 +1019,7 @@ function libresign_account_store_preview_head_styles() {
 
 		.libresign-account-shell__hero {
 			max-width: 30rem;
-			margin-bottom: auto;
+			margin-bottom: 0;
 		}
 
 		.libresign-account-shell__hero p {
@@ -1005,35 +1040,68 @@ function libresign_account_store_preview_head_styles() {
 			display: grid;
 			grid-template-columns: 1fr;
 			gap: 0.75rem;
-			margin-bottom: 0;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.libresign-account-shell__plans-list .woocommerce ul.products::before,
+		.libresign-account-shell__plans-list .woocommerce ul.products::after {
+			content: none;
 		}
 
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product {
+			position: relative;
+			overflow: hidden;
+			box-sizing: border-box;
 			width: 100%;
 			margin: 0;
-			padding: 0.95rem;
+			padding: 1rem 1.1rem;
 			border-radius: 18px;
 			background: rgba(255, 255, 255, 0.06);
 			border: 1px solid rgba(255, 255, 255, 0.12);
 			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 			backdrop-filter: blur(10px);
+			text-align: left;
 		}
 
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product a {
+		.libresign-account-shell__plans-list .woocommerce ul.products li.product > a {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.3rem;
 			color: inherit;
+			text-decoration: none;
+		}
+
+		.libresign-account-shell__plans-list .woocommerce ul.products li.product .onsale {
+			position: absolute;
+			top: 0.85rem;
+			right: 0.9rem;
+			left: auto;
+			min-width: 0;
+			min-height: 0;
+			margin: 0;
+			padding: 0.14rem 0.55rem;
+			border-radius: 999px;
+			font-size: 0.64rem;
+			font-weight: 700;
+			line-height: 1.5;
+			letter-spacing: 0.02em;
+			text-transform: none;
+			background: var(--wp--preset--color--accent-4, #b1c5a4);
+			color: #111827;
+			box-shadow: none;
 		}
 
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product img {
-			max-height: 72px;
-			width: auto;
-			margin: 0 auto 0.55rem;
-			object-fit: contain;
-			opacity: 0.95;
+			display: none;
 		}
 
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product .woocommerce-loop-product__title,
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product h2 {
-			margin: 0 0 0.35rem;
+			margin: 0;
+			padding-right: 3.25rem;
 			font-size: 1rem;
 			line-height: 1.3;
 			letter-spacing: -0.02em;
@@ -1041,19 +1109,37 @@ function libresign_account_store_preview_head_styles() {
 		}
 
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price {
-			margin: 0 0 0.55rem;
+			margin: 0;
 			font-size: 0.88rem;
 			font-weight: 700;
 			color: var(--wp--preset--color--accent-4, #b1c5a4);
 		}
 
+		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price .from {
+			opacity: 1;
+			color: rgba(249, 249, 249, 0.82);
+			font-weight: 600;
+		}
+
+		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price del {
+			opacity: 0.6;
+			font-weight: 500;
+		}
+
+		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price ins {
+			text-decoration: none;
+		}
+
 		.libresign-account-shell__plans-list .woocommerce ul.products li.product .button {
+			display: block;
+			box-sizing: border-box;
 			width: 100%;
-			margin-top: 0.35rem;
+			margin-top: 0.85rem;
 			border-radius: 999px;
 			padding: 0.62rem 0.9rem;
 			font-size: 0.84rem;
 			font-weight: 700;
+			text-align: center;
 			background: rgba(255, 255, 255, 0.94);
 			color: #111827;
 			border-color: transparent;
@@ -1260,9 +1346,31 @@ function libresign_account_store_preview_head_styles() {
 			color: var(--wp--preset--color--contrast-2, #636363);
 		}
 
+		main > .wp-block-group > .wp-block-spacer:first-child {
+			height: 1.5rem !important;
+		}
+
+		.wp-block-post-title.has-text-align-center {
+			margin-top: 0;
+		}
+
+		.libresign-account-shell > * {
+			min-width: 0;
+		}
+
 		@media (max-width: 1024px) {
 			.libresign-account-shell {
 				grid-template-columns: 1fr;
+				min-height: 0;
+			}
+
+			.libresign-account-shell__aside {
+				height: auto;
+				min-height: 0;
+			}
+
+			.libresign-account-shell__main {
+				order: -1;
 			}
 
 			.libresign-account-shell__trust {
