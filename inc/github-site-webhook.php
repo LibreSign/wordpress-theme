@@ -533,6 +533,8 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 		)
 	);
 
+	libresign_theme_post_pr_sync_comment( libresign_theme_site_origin(), $sync_result );
+
 	return rest_ensure_response(
 		array(
 			'status'      => 'synced',
@@ -541,6 +543,90 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 			'workflow'    => libresign_theme_site_deploy_workflow_name_from_payload( $payload ),
 			'origin'      => $sync_result['origin'],
 			'synced'      => $sync_result['synced'],
+		)
+	);
+}
+
+/**
+ * Decrypt the stored GitHub deploy token.
+ *
+ * Reads the token from the plugin's wp_option (libresign_github_deploy_token),
+ * which the libresign-wp-customizations plugin stores AES-256-CBC encrypted.
+ *
+ * @return string Plain-text token, or empty string if unavailable.
+ */
+function libresign_theme_github_deploy_token(): string {
+	$encrypted = get_option( 'libresign_github_deploy_token', '' );
+	if ( '' === $encrypted || ! function_exists( 'openssl_decrypt' ) ) {
+		return '';
+	}
+
+	$key       = hash( 'sha256', AUTH_KEY . SECURE_AUTH_SALT );
+	$iv        = substr( hash( 'sha256', NONCE_SALT ), 0, 16 );
+	$decrypted = openssl_decrypt( base64_decode( $encrypted ), 'AES-256-CBC', $key, 0, $iv );
+
+	return is_string( $decrypted ) ? trim( $decrypted ) : '';
+}
+
+/**
+ * Post a PR comment after fragments are synced.
+ *
+ * Fetches /_deployment-info.json from the static site (written by the Deploy
+ * workflow) to find the PR number, then posts a summary comment via the
+ * GitHub API using the stored deploy token.
+ *
+ * @param string               $site_origin Static site origin.
+ * @param array<string, mixed> $sync_result Result from libresign_theme_sync_site_fragments_from_origin().
+ * @return void
+ */
+function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_result ): void {
+	$info_response = libresign_theme_site_fragment_fetch_url(
+		rtrim( $site_origin, '/' ) . '/_deployment-info.json'
+	);
+	if ( is_wp_error( $info_response ) ) {
+		return;
+	}
+
+	$info = json_decode( (string) $info_response['body'], true );
+	if ( ! is_array( $info ) || empty( $info['pr_number'] ) ) {
+		return;
+	}
+
+	$pr_number  = (int) $info['pr_number'];
+	$repository = isset( $info['repository'] ) ? (string) $info['repository'] : libresign_theme_site_deploy_repository_name();
+
+	$token = libresign_theme_github_deploy_token();
+	if ( '' === $token ) {
+		return;
+	}
+
+	$synced      = $sync_result['synced'] ?? array();
+	$header_list = implode( ', ', (array) ( $synced['header'] ?? array() ) );
+	$footer_list = implode( ', ', (array) ( $synced['footer'] ?? array() ) );
+
+	$body = "✅ **Header and footer fragments updated in production!**\n\n" .
+			"| Fragment | Synced locales |\n" .
+			"|----------|----------------|\n" .
+			"| Header | `{$header_list}` |\n" .
+			"| Footer | `{$footer_list}` |\n\n" .
+			"Source: {$site_origin}";
+
+	$parts = explode( '/', $repository, 2 );
+	if ( count( $parts ) !== 2 || '' === $parts[0] || '' === $parts[1] ) {
+		return;
+	}
+
+	wp_remote_post(
+		"https://api.github.com/repos/{$parts[0]}/{$parts[1]}/issues/{$pr_number}/comments",
+		array(
+			'headers' => array(
+				'Authorization'        => 'Bearer ' . $token,
+				'Accept'               => 'application/vnd.github+json',
+				'Content-Type'         => 'application/json',
+				'X-GitHub-Api-Version' => '2022-11-28',
+			),
+			'body'    => wp_json_encode( array( 'body' => $body ) ),
+			'timeout' => 15,
 		)
 	);
 }
