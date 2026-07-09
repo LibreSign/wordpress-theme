@@ -206,6 +206,7 @@ endif;
 add_action( 'init', 'libresign_pattern_categories' );
 
 require_once __DIR__ . '/inc/footer-fragment.php';
+require_once __DIR__ . '/inc/github-site-webhook.php';
 
 /**
  * Return the LibreSign logo URL used as a theme-level fallback.
