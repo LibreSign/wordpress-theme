@@ -99,7 +99,7 @@ function libresign_theme_site_fragment_customize_register( $wp_customize ) {
 		array(
 			'type'              => 'theme_mod',
 			'sanitize_callback' => 'sanitize_text_field',
-			'default'           => 'Deploy',
+			'default'           => 'pages build and deployment',
 		)
 	);
 
@@ -110,6 +110,25 @@ function libresign_theme_site_fragment_customize_register( $wp_customize ) {
 			'section'     => 'libresign_site_fragment',
 			'type'        => 'text',
 			'description' => __( 'Exact GitHub Actions workflow name that represents the production deploy.', 'libresign' ),
+		)
+	);
+
+	$wp_customize->add_setting(
+		'libresign_site_deploy_branch_name',
+		array(
+			'type'              => 'theme_mod',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => 'gh-pages',
+		)
+	);
+
+	$wp_customize->add_control(
+		'libresign_site_deploy_branch_name',
+		array(
+			'label'       => __( 'Monitored branch name', 'libresign' ),
+			'section'     => 'libresign_site_fragment',
+			'type'        => 'text',
+			'description' => __( 'Expected branch name for the monitored workflow (e.g. gh-pages for pages build and deployment).', 'libresign' ),
 		)
 	);
 }
@@ -237,7 +256,19 @@ function libresign_theme_site_deploy_repository_name() {
  * @return string
  */
 function libresign_theme_site_deploy_branch_name() {
-	return 'main';
+	$values = array(
+		get_theme_mod( 'libresign_site_deploy_branch_name', '' ),
+		getenv( 'LIBRESIGN_SITE_DEPLOY_BRANCH_NAME' ),
+	);
+
+	foreach ( $values as $value ) {
+		$value = trim( (string) $value );
+		if ( '' !== $value ) {
+			return $value;
+		}
+	}
+
+	return 'gh-pages';
 }
 
 /**
