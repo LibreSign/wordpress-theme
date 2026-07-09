@@ -475,6 +475,18 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 		);
 	}
 
+	// Deploy workflow started: post "starting" comment on the PR.
+	if ( libresign_theme_is_site_deploy_starting( $payload ) ) {
+		$delivery_id = (string) $request->get_header( 'x-github-delivery' );
+		if ( ! libresign_theme_mark_github_delivery_once( $delivery_id ) ) {
+			return libresign_theme_github_site_webhook_ignored_response(
+				array( 'reason' => 'duplicate_delivery', 'delivery_id' => $delivery_id )
+			);
+		}
+		libresign_theme_handle_deploy_starting( $payload );
+		return rest_ensure_response( array( 'status' => 'acknowledged', 'action' => 'deploy_starting' ) );
+	}
+
 	if ( ! libresign_theme_is_production_site_deploy_workflow_run( $payload ) ) {
 		return libresign_theme_github_site_webhook_ignored_response(
 			array(
@@ -629,4 +641,106 @@ function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_
 			'timeout' => 15,
 		)
 	);
+}
+
+/**
+ * Determine whether the payload represents the Deploy workflow starting on main.
+ *
+ * @param array<string, mixed> $payload Parsed payload.
+ * @return bool
+ */
+function libresign_theme_is_site_deploy_starting( array $payload ): bool {
+	$repository  = isset( $payload['repository']['full_name'] ) ? trim( (string) $payload['repository']['full_name'] ) : '';
+	$action      = isset( $payload['action'] ) ? trim( (string) $payload['action'] ) : '';
+	$head_branch = isset( $payload['workflow_run']['head_branch'] ) ? trim( (string) $payload['workflow_run']['head_branch'] ) : '';
+	$wf_name     = libresign_theme_site_deploy_workflow_name_from_payload( $payload );
+
+	return libresign_theme_site_deploy_repository_name() === $repository
+		&& 'in_progress' === $action
+		&& 'main' === $head_branch
+		&& 'Deploy' === $wf_name;
+}
+
+/**
+ * Handle the Deploy workflow starting: find the merged PR and post a "starting" comment.
+ *
+ * @param array<string, mixed> $payload Parsed payload.
+ * @return void
+ */
+function libresign_theme_handle_deploy_starting( array $payload ): void {
+	$head_sha   = isset( $payload['workflow_run']['head_sha'] ) ? trim( (string) $payload['workflow_run']['head_sha'] ) : '';
+	$repository = libresign_theme_site_deploy_repository_name();
+	$token      = libresign_theme_github_deploy_token();
+
+	if ( '' === $head_sha || '' === $token ) {
+		return;
+	}
+
+	$pr_number = libresign_theme_find_pr_for_commit( $repository, $head_sha, $token );
+	if ( 0 === $pr_number ) {
+		return;
+	}
+
+	$parts = explode( '/', $repository, 2 );
+	if ( count( $parts ) !== 2 ) {
+		return;
+	}
+
+	wp_remote_post(
+		"https://api.github.com/repos/{$parts[0]}/{$parts[1]}/issues/{$pr_number}/comments",
+		array(
+			'headers' => array(
+				'Authorization'        => 'Bearer ' . $token,
+				'Accept'               => 'application/vnd.github+json',
+				'Content-Type'         => 'application/json',
+				'X-GitHub-Api-Version' => '2022-11-28',
+			),
+			'body'    => wp_json_encode( array( 'body' => '🚀 Starting production deploy of header and footer fragments...' ) ),
+			'timeout' => 15,
+		)
+	);
+}
+
+/**
+ * Find the merged PR number associated with a commit SHA via the GitHub API.
+ *
+ * @param string $repository Full repository name (owner/repo).
+ * @param string $sha        Commit SHA on the main branch.
+ * @param string $token      GitHub API token.
+ * @return int PR number, or 0 if not found.
+ */
+function libresign_theme_find_pr_for_commit( string $repository, string $sha, string $token ): int {
+	$parts = explode( '/', $repository, 2 );
+	if ( count( $parts ) !== 2 || '' === $parts[0] || '' === $parts[1] ) {
+		return 0;
+	}
+
+	$response = wp_remote_get(
+		"https://api.github.com/repos/{$parts[0]}/{$parts[1]}/commits/{$sha}/pulls",
+		array(
+			'headers' => array(
+				'Authorization'        => 'Bearer ' . $token,
+				'Accept'               => 'application/vnd.github+json',
+				'X-GitHub-Api-Version' => '2022-11-28',
+			),
+			'timeout' => 10,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return 0;
+	}
+
+	$pulls = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $pulls ) ) {
+		return 0;
+	}
+
+	foreach ( $pulls as $pr ) {
+		if ( ! empty( $pr['merged_at'] ) ) {
+			return (int) $pr['number'];
+		}
+	}
+
+	return 0;
 }
