@@ -476,6 +476,18 @@ function libresign_is_direct_lost_password_route() {
 }
 
 /**
+ * Detect a WooCommerce password-reset confirmation request (reset link, set-new-password
+ * or link-sent step), which must be handled by WooCommerce, not the custom lost-password form.
+ */
+function libresign_is_password_reset_confirmation() {
+	if ( isset( $_GET['key'] ) && ( isset( $_GET['id'] ) || isset( $_GET['login'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return true;
+	}
+
+	return isset( $_GET['show-reset-form'] ) || isset( $_GET['reset-link-sent'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+}
+
+/**
  * Render the lost-password form used on the account endpoint.
  */
 function libresign_render_lost_password_form() {
@@ -582,6 +594,11 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 	}
 
 	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
+		// Confirmation steps need WooCommerce's set-new-password form; only the initial request uses the custom form.
+		if ( libresign_is_password_reset_confirmation() ) {
+			return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
+		}
+
 		ob_start();
 		libresign_render_lost_password_form();
 		return ob_get_clean();
@@ -631,6 +648,11 @@ add_filter( 'the_content', 'libresign_prepend_saas_onboarding_to_content', 5 );
  */
 function libresign_render_direct_lost_password_route() {
 	if ( is_admin() || wp_doing_ajax() || ! libresign_is_direct_lost_password_route() ) {
+		return;
+	}
+
+	// Let WooCommerce's redirect_reset_password_link() (template_redirect priority 10) handle confirmation links.
+	if ( libresign_is_password_reset_confirmation() ) {
 		return;
 	}
 
