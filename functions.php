@@ -9,6 +9,15 @@
  */
 
 /**
+ * Load theme translations.
+ * Polylang sets the locale from the URL before this runs, so __() resolves
+ * to the correct language automatically.
+ */
+add_action( 'after_setup_theme', function () {
+	load_theme_textdomain( 'libresign', get_template_directory() . '/languages' );
+} );
+
+/**
  * Register block styles.
  */
 
@@ -270,187 +279,6 @@ function libresign_filter_custom_logo( $custom_logo_html, $blog_id ) {
 add_filter( 'get_custom_logo', 'libresign_filter_custom_logo', 10, 2 );
 
 /**
- * Resolve the active account tab for the guest experience.
- */
-function libresign_get_account_active_tab() {
-	$tab = 'register';
-
-	if ( isset( $_GET['tab'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$requested = sanitize_key( wp_unslash( $_GET['tab'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( in_array( $requested, array( 'login', 'register' ), true ) ) {
-			$tab = $requested;
-		}
-	}
-
-	if ( isset( $_POST['login'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$tab = 'login';
-	} elseif ( isset( $_POST['register'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$tab = 'register';
-	}
-
-	return $tab;
-}
-
-/**
- * Render the product grid from the store page inside the account page.
- */
-function libresign_render_account_store_preview() {
-	if ( ! function_exists( 'wc_get_page_permalink' ) ) {
-		return '';
-	}
-
-	$active_tab = libresign_get_account_active_tab();
-
-	ob_start();
-	?>
-	<section class="libresign-account-shell" id="libresign-account-shell">
-		<aside class="libresign-account-shell__aside">
-			<div class="libresign-account-shell__brand">
-				<div class="libresign-account-shell__mark" aria-hidden="true">L</div>
-				<div>
-					<p class="libresign-account-shell__brand-name">LibreSign</p>
-				</div>
-			</div>
-
-			<div class="libresign-account-shell__hero">
-				<p class="libresign-account-shell__eyebrow">Workspace + planos</p>
-				<h2>Crie seu workspace e comece a assinar documentos</h2>
-				<p>Escolha um plano, crie sua conta e siga no fluxo certo. Tudo em uma tela, sem quebra de contexto.</p>
-			</div>
-
-			<div class="libresign-account-shell__plans">
-				<p class="libresign-account-shell__section-label">Planos disponíveis</p>
-				<div class="libresign-account-shell__plans-list">
-					<?php echo libresign_render_account_plans_list(); ?>
-				</div>
-			</div>
-
-			<div class="libresign-account-shell__trust">
-				<span class="libresign-account-shell__trust-dot" aria-hidden="true"></span>
-				<span>Open source · Dados no Brasil · Cooperativa</span>
-			</div>
-		</aside>
-
-		<main class="libresign-account-shell__main" tabindex="-1">
-			<div class="libresign-account-shell__tabs" role="tablist" aria-label="Acesso LibreSign">
-				<button type="button" class="libresign-account-shell__tab<?php echo 'register' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="register" role="tab" aria-selected="<?php echo 'register' === $active_tab ? 'true' : 'false'; ?>">Criar workspace</button>
-				<button type="button" class="libresign-account-shell__tab<?php echo 'login' === $active_tab ? ' is-active' : ''; ?>" data-libresign-tab="login" role="tab" aria-selected="<?php echo 'login' === $active_tab ? 'true' : 'false'; ?>">Já tenho acesso</button>
-			</div>
-
-			<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
-				<div class="libresign-account-shell__notices">
-					<?php wc_print_notices(); ?>
-				</div>
-			<?php endif; ?>
-
-			<?php libresign_render_account_login_forms( $active_tab ); ?>
-		</main>
-	</section>
-	<?php
-	return ob_get_clean();
-}
-
-/**
- * Render the account login and registration forms in Portuguese.
- */
-function libresign_render_account_login_forms( $active_tab = 'register' ): void {
-	$show_registration = 'yes' === get_option( 'woocommerce_enable_myaccount_registration' );
-	$account_url       = libresign_get_account_url();
-	$redirect_to       = libresign_get_purchase_redirect_target();
-	$lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url();
-	?>
-	<div class="libresign-account-shell__panels">
-		<section class="libresign-account-shell__panel<?php echo 'login' === $active_tab ? ' is-active' : ''; ?>" data-libresign-panel="login" role="tabpanel">
-			<div class="libresign-account-shell__panel-header">
-				<p class="libresign-account-shell__eyebrow">Já tenho acesso</p>
-				<h2>Entrar</h2>
-				<p>Retome sua conta para gerenciar dados, métodos de pagamento e pedidos.</p>
-			</div>
-
-			<form class="woocommerce-form woocommerce-form-login login" method="post" novalidate>
-				<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-					<label for="username">E-mail ou usuário&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-					<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="username" id="username" autocomplete="username" required aria-required="true" />
-				</p>
-				<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-					<label for="password">Senha&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-					<input class="woocommerce-Input woocommerce-Input--text input-text" type="password" name="password" id="password" autocomplete="current-password" required aria-required="true" />
-				</p>
-				<p class="form-row">
-					<label class="woocommerce-form__label woocommerce-form__label-for-checkbox woocommerce-form-login__rememberme">
-						<input class="woocommerce-form__input woocommerce-form__input-checkbox" name="rememberme" type="checkbox" id="rememberme" value="forever" /> <span>Lembrar de mim</span>
-					</label>
-					<?php wp_nonce_field( 'woocommerce-login', 'woocommerce-login-nonce' ); ?>
-					<input type="hidden" name="redirect" value="<?php echo esc_url( $redirect_to ); ?>" />
-					<button type="submit" class="woocommerce-button button woocommerce-form-login__submit<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>" name="login" value="Entrar">Entrar</button>
-				</p>
-				<p class="woocommerce-LostPassword lost_password">
-					<a href="<?php echo esc_url( $lost_password_url ); ?>">Esqueceu a senha?</a>
-				</p>
-			</form>
-		</section>
-
-		<?php if ( $show_registration ) : ?>
-			<section class="libresign-account-shell__panel<?php echo 'register' === $active_tab ? ' is-active' : ''; ?>" data-libresign-panel="register" role="tabpanel">
-				<div class="libresign-account-shell__panel-header">
-					<p class="libresign-account-shell__eyebrow">Comece aqui</p>
-					<h2>Criar workspace</h2>
-					<p>Preencha os dados do workspace e siga direto para a conta com tudo pronto.</p>
-				</div>
-
-				<form method="post" class="woocommerce-form woocommerce-form-register register">
-					<input type="hidden" name="username" id="reg_username" value="" />
-
-					<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-						<label for="reg_full_name">Nome completo&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-						<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="full_name" id="reg_full_name" autocomplete="name" required aria-required="true" />
-					</p>
-
-					<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-						<label for="reg_organization">Organização&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-						<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="organization" id="reg_organization" autocomplete="organization" required aria-required="true" />
-					</p>
-
-					<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-						<label for="reg_email">E-mail&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-						<input type="email" class="woocommerce-Input woocommerce-Input--text input-text" name="email" id="reg_email" autocomplete="email" required aria-required="true" />
-					</p>
-
-					<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-						<label for="reg_password">Senha&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
-						<input type="password" class="woocommerce-Input woocommerce-Input--text input-text" name="password" id="reg_password" autocomplete="new-password" required aria-required="true" />
-					</p>
-
-					<p class="form-row form-row-wide validate-required">
-						<label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
-							<input
-								type="checkbox"
-								class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox"
-								name="libresign_workspace_terms"
-								id="libresign_workspace_terms"
-								value="1"
-								required
-							/>
-							<span>
-								Li e aceito os <a href="<?php echo esc_url( libresign_get_policy_url() ); ?>" target="_blank" rel="noopener noreferrer">Termos de Uso e a Política de Privacidade do LibreSign</a>, incluindo o tratamento de dados para operação do serviço.
-							</span>
-						</label>
-					</p>
-
-					<?php wp_nonce_field( 'woocommerce-register', 'woocommerce-register-nonce' ); ?>
-					<input type="hidden" name="redirect" value="<?php echo esc_url( $redirect_to ); ?>" />
-
-					<p class="form-row">
-						<button type="submit" class="woocommerce-Button button woocommerce-button<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?> woocommerce-form-register__submit" name="register" value="Criar workspace">Criar workspace</button>
-					</p>
-				</form>
-			</section>
-		<?php endif; ?>
-	</div>
-	<?php
-}
-
-/**
  * Detect if the current request targets the WooCommerce lost-password endpoint.
  */
 function libresign_is_lost_password_request() {
@@ -504,29 +332,29 @@ function libresign_render_lost_password_form() {
 			</div>
 
 			<div class="libresign-account-shell__hero">
-				<p class="libresign-account-shell__eyebrow">Acesso</p>
-				<h2>Recuperar senha</h2>
-				<p>Informe seu e-mail ou usuário para receber o link de redefinição de senha.</p>
+				<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Acesso', 'libresign' ); ?></p>
+				<h2><?php esc_html_e( 'Recuperar senha', 'libresign' ); ?></h2>
+				<p><?php esc_html_e( 'Informe seu e-mail ou usuário para receber o link de redefinição de senha.', 'libresign' ); ?></p>
 			</div>
 
 			<div class="libresign-account-shell__actions">
-				<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'tab', 'register', $account_url ) ); ?>#libresign-account-shell" data-libresign-open-tab="register">Criar workspace grátis</a>
-				<a class="button" href="<?php echo esc_url( $account_url ); ?>">Voltar para entrar</a>
+				<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'tab', 'register', $account_url ) ); ?>#libresign-account-shell" data-libresign-open-tab="register"><?php esc_html_e( 'Criar workspace grátis', 'libresign' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Voltar para entrar', 'libresign' ); ?></a>
 			</div>
 		</aside>
 
 		<main class="libresign-account-shell__main" tabindex="-1">
-			<div class="libresign-account-shell__tabs" role="tablist" aria-label="Acesso LibreSign">
-				<a class="libresign-account-shell__tab is-active" href="<?php echo esc_url( $account_url ); ?>">Entrar</a>
-				<a class="libresign-account-shell__tab" href="<?php echo esc_url( $lost_password_url ); ?>" aria-selected="true">Esqueci a senha</a>
+			<div class="libresign-account-shell__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Acesso LibreSign', 'libresign' ); ?>">
+				<a class="libresign-account-shell__tab is-active" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Entrar', 'libresign' ); ?></a>
+				<a class="libresign-account-shell__tab" href="<?php echo esc_url( $lost_password_url ); ?>" aria-selected="true"><?php esc_html_e( 'Esqueci a senha', 'libresign' ); ?></a>
 			</div>
 
 			<div class="libresign-account-shell__panels">
 				<section class="libresign-account-shell__panel is-active" data-libresign-panel="lost-password" role="tabpanel">
 					<div class="libresign-account-shell__panel-header">
-						<p class="libresign-account-shell__eyebrow">Esqueci a senha</p>
-						<h2>Enviar link de redefinição</h2>
-						<p>Se sua conta existir, enviaremos um e-mail com o próximo passo.</p>
+						<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Esqueci a senha', 'libresign' ); ?></p>
+						<h2><?php esc_html_e( 'Enviar link de redefinição', 'libresign' ); ?></h2>
+						<p><?php esc_html_e( 'Se sua conta existir, enviaremos um e-mail com o próximo passo.', 'libresign' ); ?></p>
 					</div>
 
 					<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
@@ -537,7 +365,7 @@ function libresign_render_lost_password_form() {
 
 					<form method="post" class="woocommerce-form woocommerce-form-login login lost_reset_password">
 						<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-							<label for="user_login">E-mail ou usuário&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text">Obrigatório</span></label>
+							<label for="user_login"><?php esc_html_e( 'E-mail ou usuário', 'libresign' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Obrigatório', 'libresign' ); ?></span></label>
 							<input type="text" name="user_login" id="user_login" class="woocommerce-Input woocommerce-Input--text input-text" autocomplete="username" required aria-required="true" />
 						</p>
 
@@ -545,7 +373,7 @@ function libresign_render_lost_password_form() {
 						<?php wp_nonce_field( 'lost_password', 'woocommerce-lost-password-nonce' ); ?>
 
 						<p class="form-row">
-							<button type="submit" class="woocommerce-button button woocommerce-form-login__submit">Enviar link</button>
+							<button type="submit" class="woocommerce-button button woocommerce-form-login__submit"><?php esc_html_e( 'Enviar link', 'libresign' ); ?></button>
 						</p>
 					</form>
 				</section>
@@ -553,23 +381,6 @@ function libresign_render_lost_password_form() {
 		</main>
 	</section>
 	<?php
-}
-
-/**
- * Render the active shop products on the account page.
- */
-function libresign_render_account_plans_list() {
-	if ( ! function_exists( 'do_shortcode' ) ) {
-		return '';
-	}
-
-	$products = do_shortcode( '[products limit="3" columns="1" orderby="menu_order" order="ASC"]' );
-
-	if ( '' === trim( (string) $products ) ) {
-		return '<p class="libresign-account-store-preview__empty">Nenhum plano encontrado no momento.</p>';
-	}
-
-	return '<div class="libresign-account-store-preview__products">' . $products . '</div>';
 }
 
 /**
@@ -613,10 +424,9 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 	}
 
 	if ( function_exists( 'is_account_page' ) && is_account_page() ) {
-		return libresign_render_account_store_preview();
+		return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
 	}
 
-	$account_store_preview = '';
 	$should_prepend = ( function_exists( 'is_shop' ) && is_shop() )
 		|| ( function_exists( 'is_checkout' ) && is_checkout() );
 
@@ -631,15 +441,7 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 		}
 	}
 
-	if ( function_exists( 'is_account_page' ) && is_account_page() && false === strpos( $content, 'libresign-account-store-preview' ) ) {
-		$account_store_preview = libresign_render_account_store_preview();
-	}
-
-	if ( function_exists( 'is_account_page' ) && is_account_page() ) {
-		$content = preg_replace( '#<p[^>]*>\\s*</p>#', '', $content );
-	}
-
-	return $account_store_preview . $content;
+	return $content;
 }
 add_filter( 'the_content', 'libresign_prepend_saas_onboarding_to_content', 5 );
 
@@ -669,846 +471,15 @@ function libresign_render_direct_lost_password_route() {
 add_action( 'template_redirect', 'libresign_render_direct_lost_password_route', 1 );
 
 /**
- * Print account-page-specific styles inline so cache and specificity do not hide them.
+ * Validate the custom workspace registration fields.
  */
-function libresign_account_store_preview_head_styles() {
-	if ( ! function_exists( 'is_account_page' ) || ! is_account_page() || is_user_logged_in() ) {
-		return;
-	}
-
-	?>
-	<style id="libresign-account-store-preview-inline-css">
-		.woocommerce-account .wp-block-post-title {
-			margin-bottom: 1rem;
-			font-size: clamp(1.9rem, 3.2vw, 3rem);
-			font-weight: 800;
-			letter-spacing: -0.04em;
-			line-height: 1;
-			color: #0f172a;
-			text-wrap: balance;
-		}
-
-		.libresign-account-store-preview {
-			position: relative;
-			overflow: hidden;
-		}
-
-		.libresign-account-store-preview::before {
-			content: "";
-			position: absolute;
-			inset: 0;
-			background: linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0));
-			pointer-events: none;
-		}
-
-		.libresign-account-store-preview__header {
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-store-preview__eyebrow {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.45rem;
-			padding: 0.35rem 0.65rem;
-			border-radius: 999px;
-			background: rgba(15, 118, 110, 0.08);
-			color: #0f766e;
-			font-size: 0.72rem;
-			font-weight: 700;
-			letter-spacing: 0.08em;
-			text-transform: uppercase;
-		}
-
-		.libresign-account-store-preview__header h2 {
-			max-width: 14ch;
-			margin: 0.4rem 0 0.65rem;
-			font-size: clamp(1.65rem, 3vw, 2.55rem);
-			line-height: 1.05;
-		}
-
-		.libresign-account-store-preview__header p {
-			max-width: 58rem;
-			color: #334155;
-			font-size: 0.98rem;
-			line-height: 1.55;
-		}
-
-		.libresign-account-store-preview__actions {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.85rem;
-			margin-top: 1.5rem;
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-store-preview__actions .button {
-			border-radius: 999px;
-			padding: 0.72rem 1rem;
-			font-size: 0.92rem;
-			font-weight: 700;
-			letter-spacing: -0.01em;
-			box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-		}
-
-		.libresign-account-store-preview__actions .button-primary {
-			background: #0f766e;
-			border-color: #0f766e;
-			color: #fff;
-		}
-
-		.libresign-account-store-preview__actions .button-primary:hover,
-		.libresign-account-store-preview__actions .button-primary:focus {
-			background: #115e59;
-			border-color: #115e59;
-			color: #fff;
-		}
-
-		.libresign-account-store-preview__note {
-			margin: 0.85rem 0 0;
-			color: #475569;
-			font-size: 0.88rem;
-			line-height: 1.55;
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-store-preview__plans {
-			margin-top: 1.5rem;
-			padding: 1rem;
-			border-radius: 18px;
-			background: rgba(255, 255, 255, 0.68);
-			border: 1px solid rgba(15, 23, 42, 0.06);
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-store-preview__plans-header h3 {
-			margin: 0.25rem 0 0.4rem;
-			font-size: clamp(1rem, 1.5vw, 1.15rem);
-			font-weight: 800;
-			letter-spacing: -0.01em;
-			color: #0f172a;
-		}
-
-		.libresign-account-store-preview__plans-header p {
-			margin: 0;
-			max-width: 58rem;
-			color: #475569;
-			font-size: 0.9rem;
-			line-height: 1.5;
-		}
-
-		.libresign-account-store-preview__products {
-			margin-top: 0.9rem;
-		}
-
-		.libresign-account-login {
-			margin-top: 1.5rem;
-			padding: 1rem 1rem 0.35rem;
-			border-radius: 18px;
-			background: rgba(255, 255, 255, 0.7);
-			border: 1px solid rgba(15, 23, 42, 0.06);
-			scroll-margin-top: 2rem;
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-login__eyebrow {
-			margin: 0 0 0.25rem;
-			font-size: 0.68rem;
-			font-weight: 700;
-			letter-spacing: 0.1em;
-			text-transform: uppercase;
-			color: #0f766e;
-		}
-
-		.libresign-account-login h3 {
-			margin: 0 0 0.8rem;
-			font-size: clamp(1rem, 1.8vw, 1.25rem);
-			font-weight: 800;
-			letter-spacing: -0.01em;
-			color: #0f172a;
-		}
-
-		.libresign-account-login__helper {
-			margin: -0.2rem 0 0.9rem;
-			max-width: 38rem;
-			color: #475569;
-			font-size: 0.88rem;
-			line-height: 1.5;
-		}
-
-		.libresign-account-login .woocommerce-form-login,
-		.libresign-account-login .woocommerce-form-register {
-			margin-bottom: 0;
-		}
-
-		.libresign-account-login .woocommerce-form-register .form-row,
-		.libresign-account-login .woocommerce-form-login .form-row {
-			margin-bottom: 0.75rem;
-		}
-
-		.libresign-account-login .woocommerce-form-register label,
-		.libresign-account-login .woocommerce-form-login label {
-			display: inline-block;
-			margin-bottom: 0.25rem;
-			font-size: 0.84rem;
-			font-weight: 600;
-			color: #0f172a;
-		}
-
-		.libresign-account-login .woocommerce-form-register .input-text,
-		.libresign-account-login .woocommerce-form-login .input-text {
-			border-radius: 12px;
-			border-color: rgba(15, 23, 42, 0.12);
-			background: rgba(255, 255, 255, 0.9);
-			box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
-			min-height: 2.6rem;
-			font-size: 0.94rem;
-		}
-
-		.libresign-account-login .woocommerce-form-register .input-text:focus,
-		.libresign-account-login .woocommerce-form-login .input-text:focus {
-			border-color: #0f766e;
-			box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
-		}
-
-		.libresign-account-login .woocommerce-form-register .checkbox {
-			align-items: flex-start;
-			line-height: 1.45;
-			color: #334155;
-			font-size: 0.86rem;
-		}
-
-		.libresign-account-login .woocommerce-form-register .checkbox a {
-			color: #0f766e;
-			font-weight: 700;
-			text-decoration-thickness: 0.1em;
-			text-underline-offset: 0.18em;
-		}
-
-		.libresign-account-login .woocommerce-form-register .woocommerce-form-register__submit,
-		.libresign-account-login .woocommerce-form-login .woocommerce-form-login__submit {
-			border-radius: 999px;
-			padding-inline: 1.15rem;
-			min-height: 2.6rem;
-			font-size: 0.92rem;
-			font-weight: 800;
-			letter-spacing: -0.01em;
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products {
-			gap: 0.5rem;
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products li.product {
-			padding: 0.6rem;
-			border-radius: 14px;
-			background: rgba(255, 255, 255, 0.72);
-			backdrop-filter: blur(6px);
-			box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products li.product img {
-			max-height: 72px;
-			width: auto;
-			object-fit: contain;
-			margin: 0 auto 0.45rem;
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products li.product .woocommerce-loop-product__title,
-		.libresign-account-store-preview .woocommerce ul.products li.product h2 {
-			font-size: 0.88rem;
-			line-height: 1.3;
-			margin-bottom: 0.25rem;
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products li.product .price {
-			font-size: 0.84rem;
-			margin-bottom: 0.35rem;
-		}
-
-		.libresign-account-store-preview .woocommerce ul.products li.product .button {
-			width: 100%;
-			margin-top: 0.4rem;
-			border-radius: 999px;
-			padding: 0.5rem 0.75rem;
-			font-size: 0.8rem;
-		}
-
-		.libresign-account-store-preview__empty {
-			margin: 0.75rem 0 0;
-			color: #64748b;
-			font-size: 0.88rem;
-		}
-
-		.libresign-account-shell {
-			display: grid;
-			grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
-			max-width: 1120px;
-			min-height: 640px;
-			margin: 2rem auto 3rem;
-			border: 1px solid rgba(17, 24, 39, 0.08);
-			border-radius: 30px;
-			overflow: hidden;
-			background: var(--wp--preset--color--base-2, #fff);
-			box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-		}
-
-		.libresign-account-shell__aside {
-			position: relative;
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;
-			min-height: 100%;
-			height: 100%;
-			gap: 1.5rem;
-			padding: clamp(1.5rem, 3vw, 2.5rem);
-			background:
-				radial-gradient(circle at top right, rgba(181, 189, 188, 0.18), transparent 24%),
-				radial-gradient(circle at 20% 20%, rgba(178, 197, 164, 0.16), transparent 22%),
-				linear-gradient(180deg, #111827 0%, #0f172a 100%);
-			color: var(--wp--preset--color--base-2, #fff);
-		}
-
-		.libresign-account-shell__aside::after {
-			content: "";
-			position: absolute;
-			inset: 0;
-			background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
-			pointer-events: none;
-		}
-
-		.libresign-account-shell__brand,
-		.libresign-account-shell__hero,
-		.libresign-account-shell__plans,
-		.libresign-account-shell__trust,
-		.libresign-account-shell__actions {
-			position: relative;
-			z-index: 1;
-		}
-
-		.libresign-account-shell__brand {
-			display: flex;
-			align-items: center;
-			gap: 0.8rem;
-		}
-
-		.libresign-account-shell__mark {
-			width: 3rem;
-			height: 3rem;
-			display: grid;
-			place-items: center;
-			border-radius: 0.9rem;
-			background: var(--wp--preset--color--accent-4, #b1c5a4);
-			color: #111827;
-			font-weight: 800;
-			font-size: 1rem;
-			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-		}
-
-		.libresign-account-shell__brand-name {
-			margin: 0;
-			font-size: 1rem;
-			font-weight: 800;
-			letter-spacing: -0.02em;
-		}
-
-		.libresign-account-shell__brand-subtitle {
-			margin: 0.15rem 0 0;
-			font-size: 0.82rem;
-			color: rgba(249, 249, 249, 0.68);
-		}
-
-		.libresign-account-shell__eyebrow,
-		.libresign-account-shell__section-label {
-			margin: 0 0 0.55rem;
-			font-size: 0.72rem;
-			font-weight: 700;
-			letter-spacing: 0.12em;
-			text-transform: uppercase;
-			color: var(--wp--preset--color--accent-4, #b1c5a4);
-		}
-
-		.libresign-account-shell__hero h2 {
-			margin: 0 0 0.75rem;
-			font-size: clamp(2rem, 3.5vw, 3.4rem);
-			line-height: 1.03;
-			letter-spacing: -0.05em;
-			color: var(--wp--preset--color--base-2, #fff);
-		}
-
-		.libresign-account-shell__hero {
-			max-width: 30rem;
-			margin-bottom: 0;
-		}
-
-		.libresign-account-shell__hero p {
-			margin: 0;
-			max-width: 34rem;
-			font-size: 0.98rem;
-			line-height: 1.65;
-			color: rgba(249, 249, 249, 0.72);
-		}
-
-		.libresign-account-shell__plans {
-			display: grid;
-			gap: 0.75rem;
-			margin-top: 0;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products {
-			display: grid;
-			grid-template-columns: 1fr;
-			gap: 0.75rem;
-			margin: 0;
-			padding: 0;
-			list-style: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products::before,
-		.libresign-account-shell__plans-list .woocommerce ul.products::after {
-			content: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product {
-			position: relative;
-			overflow: hidden;
-			box-sizing: border-box;
-			width: 100%;
-			margin: 0;
-			padding: 1rem 1.1rem;
-			border-radius: 18px;
-			background: rgba(255, 255, 255, 0.06);
-			border: 1px solid rgba(255, 255, 255, 0.12);
-			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-			backdrop-filter: blur(10px);
-			text-align: left;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product > a {
-			display: flex;
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.3rem;
-			color: inherit;
-			text-decoration: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .onsale {
-			position: absolute;
-			top: 0.85rem;
-			right: 0.9rem;
-			left: auto;
-			min-width: 0;
-			min-height: 0;
-			margin: 0;
-			padding: 0.14rem 0.55rem;
-			border-radius: 999px;
-			font-size: 0.64rem;
-			font-weight: 700;
-			line-height: 1.5;
-			letter-spacing: 0.02em;
-			text-transform: none;
-			background: var(--wp--preset--color--accent-4, #b1c5a4);
-			color: #111827;
-			box-shadow: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product img {
-			display: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .woocommerce-loop-product__title,
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product h2 {
-			margin: 0;
-			padding-right: 3.25rem;
-			font-size: 1rem;
-			line-height: 1.3;
-			letter-spacing: -0.02em;
-			color: var(--wp--preset--color--base-2, #fff);
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price {
-			margin: 0;
-			font-size: 0.88rem;
-			font-weight: 700;
-			color: var(--wp--preset--color--accent-4, #b1c5a4);
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price .from {
-			opacity: 1;
-			color: rgba(249, 249, 249, 0.82);
-			font-weight: 600;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price del {
-			opacity: 0.6;
-			font-weight: 500;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .price ins {
-			text-decoration: none;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .button {
-			display: block;
-			box-sizing: border-box;
-			width: 100%;
-			margin-top: 0.85rem;
-			border-radius: 999px;
-			padding: 0.62rem 0.9rem;
-			font-size: 0.84rem;
-			font-weight: 700;
-			text-align: center;
-			background: rgba(255, 255, 255, 0.94);
-			color: #111827;
-			border-color: transparent;
-		}
-
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .button:hover,
-		.libresign-account-shell__plans-list .woocommerce ul.products li.product .button:focus {
-			background: var(--wp--preset--color--accent-4, #b1c5a4);
-			color: #111827;
-		}
-
-		.libresign-account-shell__trust {
-			display: flex;
-			align-items: center;
-			gap: 0.55rem;
-			margin-top: 0;
-			font-size: 0.84rem;
-			color: rgba(249, 249, 249, 0.66);
-		}
-
-		.libresign-account-shell__trust-dot {
-			width: 0.45rem;
-			height: 0.45rem;
-			border-radius: 999px;
-			background: var(--wp--preset--color--accent-4, #b1c5a4);
-			box-shadow: 0 0 0 4px rgba(177, 197, 164, 0.14);
-		}
-
-		.libresign-account-shell__actions {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.75rem;
-			margin-top: 0;
-		}
-
-		.libresign-account-shell__actions .button {
-			border-radius: 999px;
-			padding: 0.85rem 1.15rem;
-			font-size: 0.9rem;
-			font-weight: 700;
-		}
-
-		.libresign-account-shell__actions .button-primary {
-			background: var(--wp--preset--color--accent-4, #b1c5a4);
-			border-color: var(--wp--preset--color--accent-4, #b1c5a4);
-			color: #111827;
-		}
-
-		.libresign-account-shell__actions .button-primary:hover,
-		.libresign-account-shell__actions .button-primary:focus {
-			background: var(--wp--preset--color--base-2, #fff);
-			border-color: var(--wp--preset--color--base-2, #fff);
-			color: #111827;
-		}
-
-		.libresign-account-shell__main {
-			padding: clamp(1.5rem, 3vw, 2.5rem);
-			background:
-				radial-gradient(circle at top right, rgba(193, 169, 144, 0.1), transparent 22%),
-				linear-gradient(180deg, var(--wp--preset--color--base-2, #fff), var(--wp--preset--color--base, #f9f9f9));
-		}
-
-		.libresign-account-shell__tabs {
-			display: inline-flex;
-			flex-wrap: wrap;
-			gap: 0.35rem;
-			margin-bottom: 1.15rem;
-			padding: 0.3rem;
-			border-radius: 999px;
-			background: rgba(17, 24, 39, 0.04);
-		}
-
-		.libresign-account-shell__tab {
-			border: 0;
-			background: transparent;
-			color: var(--wp--preset--color--contrast-2, #636363);
-			font-size: 0.88rem;
-			font-weight: 700;
-			padding: 0.7rem 1rem;
-			border-radius: 999px;
-			cursor: pointer;
-			transition: background 0.15s ease, color 0.15s ease;
-		}
-
-		.libresign-account-shell__tab.is-active {
-			background: var(--wp--preset--color--contrast, #111111);
-			color: var(--wp--preset--color--base-2, #fff);
-			box-shadow: 0 10px 22px rgba(17, 17, 17, 0.16);
-		}
-
-		.libresign-account-shell__notices {
-			margin-bottom: 1rem;
-		}
-
-		.libresign-account-shell__notices .woocommerce-error,
-		.libresign-account-shell__notices .woocommerce-message,
-		.libresign-account-shell__notices .woocommerce-info {
-			margin: 0 0 0.75rem;
-			border-radius: 16px;
-		}
-
-		.libresign-account-shell__panels {
-			display: grid;
-			gap: 1rem;
-		}
-
-		.libresign-account-shell__panel {
-			display: none;
-			padding: 1.25rem;
-			border: 1px solid rgba(17, 24, 39, 0.08);
-			border-radius: 22px;
-			background: rgba(255, 255, 255, 0.8);
-			box-shadow: 0 18px 32px rgba(15, 23, 42, 0.05);
-		}
-
-		.libresign-account-shell__panel.is-active {
-			display: block;
-		}
-
-		.libresign-account-shell__panel-header {
-			margin-bottom: 1rem;
-		}
-
-		.libresign-account-shell__panel-header h2 {
-			margin: 0 0 0.35rem;
-			font-size: clamp(1.25rem, 2vw, 1.75rem);
-			letter-spacing: -0.03em;
-			line-height: 1.15;
-			color: var(--wp--preset--color--contrast, #111111);
-		}
-
-		.libresign-account-shell__panel-header p {
-			margin: 0;
-			max-width: 34rem;
-			color: var(--wp--preset--color--contrast-2, #636363);
-			font-size: 0.94rem;
-			line-height: 1.6;
-		}
-
-		.libresign-account-shell .woocommerce-form-login,
-		.libresign-account-shell .woocommerce-form-register {
-			margin-bottom: 0;
-		}
-
-		.libresign-account-shell .woocommerce-form-register .form-row,
-		.libresign-account-shell .woocommerce-form-login .form-row {
-			margin-bottom: 0.85rem;
-		}
-
-		.libresign-account-shell .woocommerce-form-register label,
-		.libresign-account-shell .woocommerce-form-login label {
-			display: inline-block;
-			margin-bottom: 0.3rem;
-			font-size: 0.86rem;
-			font-weight: 600;
-			color: var(--wp--preset--color--contrast, #111111);
-		}
-
-		.libresign-account-shell .woocommerce-form-register .input-text,
-		.libresign-account-shell .woocommerce-form-login .input-text {
-			min-height: 2.7rem;
-			border-radius: 14px;
-			border-color: rgba(17, 24, 39, 0.12);
-			background: rgba(249, 249, 249, 0.9);
-			box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
-		}
-
-		.libresign-account-shell .woocommerce-form-register .input-text:focus,
-		.libresign-account-shell .woocommerce-form-login .input-text:focus {
-			border-color: var(--wp--preset--color--accent-4, #b1c5a4);
-			box-shadow: 0 0 0 3px rgba(177, 197, 164, 0.16);
-		}
-
-		.libresign-account-shell .woocommerce-form-register .checkbox {
-			align-items: flex-start;
-			gap: 0.55rem;
-			line-height: 1.5;
-			color: var(--wp--preset--color--contrast-2, #636363);
-			font-size: 0.88rem;
-		}
-
-		.libresign-account-shell .woocommerce-form-register .checkbox a {
-			color: var(--wp--preset--color--contrast, #111111);
-			font-weight: 700;
-			text-decoration-thickness: 0.1em;
-			text-underline-offset: 0.18em;
-		}
-
-		.libresign-account-shell .woocommerce-form-register .woocommerce-form-register__submit,
-		.libresign-account-shell .woocommerce-form-login .woocommerce-form-login__submit {
-			border-radius: 999px;
-			padding-inline: 1.2rem;
-			min-height: 2.8rem;
-			font-size: 0.92rem;
-			font-weight: 800;
-			letter-spacing: -0.01em;
-		}
-
-		.libresign-account-shell .woocommerce-LostPassword {
-			margin: 0.2rem 0 0;
-		}
-
-		.libresign-account-shell .woocommerce-LostPassword a {
-			color: var(--wp--preset--color--contrast-2, #636363);
-		}
-
-		main > .wp-block-group > .wp-block-spacer:first-child {
-			height: 1.5rem !important;
-		}
-
-		.wp-block-post-title.has-text-align-center {
-			margin-top: 0;
-		}
-
-		.libresign-account-shell > * {
-			min-width: 0;
-		}
-
-		@media (max-width: 1024px) {
-			.libresign-account-shell {
-				grid-template-columns: 1fr;
-				min-height: 0;
-			}
-
-			.libresign-account-shell__aside {
-				height: auto;
-				min-height: 0;
-			}
-
-			.libresign-account-shell__main {
-				order: -1;
-			}
-
-			.libresign-account-shell__trust {
-				margin-top: 0;
-			}
-		}
-
-		@media (max-width: 768px) {
-			.libresign-account-shell__main {
-				padding: 1.1rem;
-			}
-
-			.libresign-account-shell__aside {
-				padding: 1.1rem;
-			}
-
-			.libresign-account-shell__panel {
-				padding: 1rem;
-			}
-		}
-	</style>
-	<?php
-}
-add_action( 'wp_head', 'libresign_account_store_preview_head_styles', 99 );
-
-/**
- * Reveal the hidden login and registration area when the CTA is clicked.
- */
-function libresign_account_store_preview_toggle_script() {
-	if ( ! function_exists( 'is_account_page' ) || ! is_account_page() || is_user_logged_in() ) {
-		return;
-	}
-	?>
-	<script>
-		(function () {
-			const shell = document.querySelector('.libresign-account-shell');
-
-			if (!shell) {
-				return;
-			}
-
-			const tabs = Array.from(shell.querySelectorAll('[data-libresign-tab]'));
-			const panels = Array.from(shell.querySelectorAll('[data-libresign-panel]'));
-			const openers = Array.from(shell.querySelectorAll('[data-libresign-open-tab]'));
-			const focusPanel = function (panel) {
-				const firstField = panel.querySelector('input, button, select, textarea, a[href]');
-				if (firstField) {
-					firstField.focus({ preventScroll: true });
-				}
-			};
-
-			const activateTab = function (tabName, shouldFocus) {
-				tabs.forEach(function (tab) {
-					const isActive = tab.dataset.libresignTab === tabName;
-					tab.classList.toggle('is-active', isActive);
-					tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-				});
-
-				panels.forEach(function (panel) {
-					const isActive = panel.dataset.libresignPanel === tabName;
-					panel.classList.toggle('is-active', isActive);
-					panel.hidden = !isActive;
-				});
-
-				if (shouldFocus) {
-					const targetPanel = panels.find(function (panel) {
-						return panel.dataset.libresignPanel === tabName;
-					});
-					if (targetPanel) {
-						focusPanel(targetPanel);
-					}
-				}
-			};
-
-			tabs.forEach(function (tab) {
-				tab.addEventListener('click', function () {
-					activateTab(tab.dataset.libresignTab, true);
-				});
-			});
-
-			openers.forEach(function (opener) {
-				opener.addEventListener('click', function (event) {
-					const tabName = opener.dataset.libresignOpenTab || 'register';
-					const targetPanel = shell.querySelector('[data-libresign-panel="' + tabName + '"]');
-					if (event) {
-						event.preventDefault();
-					}
-
-					if (!targetPanel) {
-						window.location.href = opener.href;
-						return;
-					}
-
-					activateTab(tabName, false);
-					shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
-					focusPanel(targetPanel);
-				});
-			});
-
-			if (window.location.hash === '#libresign-account-shell') {
-				shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}
-		})();
-	</script>
-	<?php
-}
-add_action( 'wp_footer', 'libresign_account_store_preview_toggle_script', 99 );
 
 /**
  * Validate the custom workspace registration fields.
  */
 function libresign_validate_workspace_registration_fields( $errors, $username, $email ) {
-	$full_name    = isset( $_POST['full_name'] ) ? trim( (string) wp_unslash( $_POST['full_name'] ) ) : '';
-	$organization = isset( $_POST['organization'] ) ? trim( (string) wp_unslash( $_POST['organization'] ) ) : '';
-	$password     = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
+	$full_name = isset( $_POST['full_name'] ) ? trim( (string) wp_unslash( $_POST['full_name'] ) ) : '';
+	$password  = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 
 	if ( '' === $username && ! empty( $email ) ) {
 		$generated_username = libresign_generate_workspace_username( $email );
@@ -1518,25 +489,21 @@ function libresign_validate_workspace_registration_fields( $errors, $username, $
 	}
 
 	if ( '' === $full_name ) {
-		$errors->add( 'full_name_required', 'Informe seu nome completo.' );
-	}
-
-	if ( '' === $organization ) {
-		$errors->add( 'organization_required', 'Informe sua organização.' );
+		$errors->add( 'full_name_required', __( 'Informe seu nome completo.', 'libresign' ) );
 	}
 
 	if ( '' === $email ) {
-		$errors->add( 'email_required', 'Informe um e-mail válido.' );
+		$errors->add( 'email_required', __( 'Informe um e-mail válido.', 'libresign' ) );
 	}
 
 	if ( '' === $password ) {
-		$errors->add( 'password_required', 'Informe uma senha.' );
+		$errors->add( 'password_required', __( 'Informe uma senha.', 'libresign' ) );
 	}
 
 	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$errors->add(
 			'libresign_workspace_terms',
-			'Você precisa aceitar os termos para criar o workspace.'
+			__( 'Você precisa aceitar os termos para criar o workspace.', 'libresign' )
 		);
 	}
 
@@ -1569,8 +536,7 @@ function libresign_generate_workspace_username( $email ) {
  * Persist the custom workspace fields on customer creation.
  */
 function libresign_save_workspace_registration_fields( $customer_id ) {
-	$full_name    = isset( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
-	$organization = isset( $_POST['organization'] ) ? sanitize_text_field( wp_unslash( $_POST['organization'] ) ) : '';
+	$full_name = isset( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
 
 	if ( '' !== $full_name ) {
 		$parts = preg_split( '/\s+/', $full_name );
@@ -1589,11 +555,6 @@ function libresign_save_workspace_registration_fields( $customer_id ) {
 
 		update_user_meta( $customer_id, 'libresign_full_name', $full_name );
 		update_user_meta( $customer_id, 'billing_name', $full_name );
-	}
-
-	if ( '' !== $organization ) {
-		update_user_meta( $customer_id, 'billing_company', $organization );
-		update_user_meta( $customer_id, 'libresign_organization', $organization );
 	}
 
 	if ( ! empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -1672,7 +633,7 @@ add_action( 'woocommerce_register_form', 'libresign_render_registration_policy_c
  * Require policy consent before creating an account.
  */
 function libresign_validate_registration_policy_consent( $errors, $username, $email ) {
-	if ( isset( $_POST["full_name"] ) || isset( $_POST["organization"] ) || isset( $_POST["password"] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	if ( isset( $_POST['full_name'] ) || isset( $_POST['password'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return $errors;
 	}
 
@@ -1748,56 +709,46 @@ function libresign_get_account_url() {
 }
 
 /**
- * Translate the WooCommerce account navigation into Portuguese.
+ * Register CPF/CNPJ as an additional checkout field (WooCommerce Blocks 8.7+).
+ * The field is optional in the UI; server-side validation requires it for Brazil.
  */
-function libresign_translate_account_menu_items( $items ) {
-	$translations = array(
-		'dashboard'       => 'Painel',
-		'orders'          => 'Pedidos',
-		'downloads'       => 'Downloads',
-		'edit-address'    => 'Endereços',
-		'payment-methods'  => 'Métodos de pagamento',
-		'edit-account'    => 'Dados da conta',
-		'subscriptions'   => 'Assinaturas',
-		'customer-logout' => 'Sair',
-	);
-
-	foreach ( $items as $key => $label ) {
-		if ( isset( $translations[ $key ] ) ) {
-			$items[ $key ] = $translations[ $key ];
-		}
+add_action( 'woocommerce_init', function () {
+	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
+		return;
 	}
 
-	return $items;
-}
-add_filter( 'woocommerce_account_menu_items', 'libresign_translate_account_menu_items' );
+	woocommerce_register_additional_checkout_field(
+		array(
+			'id'         => 'libresign/cpf-cnpj',
+			'label'      => __( 'CPF ou CNPJ', 'libresign' ),
+			'location'   => 'address',
+			'required'   => false,
+			'type'       => 'text',
+			'attributes' => array(
+				'autocomplete' => 'off',
+				'placeholder'  => __( 'Obrigatório para clientes no Brasil', 'libresign' ),
+			),
+		)
+	);
+} );
 
 /**
- * Translate WooCommerce account dashboard copy when the account page is loaded.
+ * Require CPF/CNPJ only when the billing country is Brazil.
  */
-function libresign_translate_account_gettext( $translated, $text, $domain ) {
-	if ( 'woocommerce' !== $domain || ! function_exists( 'is_account_page' ) || ! is_account_page() ) {
-		return $translated;
+add_action( 'woocommerce_validate_additional_field', function ( \WP_Error $errors, string $field_key, $field_value ) {
+	if ( 'libresign/cpf-cnpj' !== $field_key ) {
+		return;
 	}
 
-	$replacements = array(
-		'Dashboard' => 'Painel',
-		'Orders' => 'Pedidos',
-		'Payment methods' => 'Métodos de pagamento',
-		'Account details' => 'Dados da conta',
-		'Addresses' => 'Endereços',
-		'Logout' => 'Sair',
-		'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.' =>
-			'No painel da sua conta, você pode ver seus pedidos recentes, gerenciar seus endereços de cobrança e entrega e editar sua senha e os detalhes da conta.',
-	);
+	$country = function_exists( 'WC' ) && WC()->customer ? WC()->customer->get_billing_country() : '';
 
-	if ( isset( $replacements[ $text ] ) ) {
-		return $replacements[ $text ];
+	if ( 'BR' === $country && '' === trim( (string) $field_value ) ) {
+		$errors->add(
+			'libresign-cpf-cnpj-required',
+			__( 'Informe seu CPF ou CNPJ para emissão da nota fiscal.', 'libresign' )
+		);
 	}
-
-	return $translated;
-}
-add_filter( 'gettext', 'libresign_translate_account_gettext', 20, 3 );
+}, 10, 3 );
 
 /**
  * Customize the checkout terms checkbox text to point at the policy page.
