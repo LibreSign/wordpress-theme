@@ -1,7 +1,6 @@
 <?php
 /**
- * Theme setup: text domain, block styles, block stylesheets, pattern
- * categories and logo fallback.
+ * Theme setup: text domain, block stylesheets and pattern categories.
  *
  * @package libresign
  */
@@ -64,68 +63,3 @@ if ( ! function_exists( 'libresign_pattern_categories' ) ) :
 endif;
 
 add_action( 'init', 'libresign_pattern_categories' );
-
-// ---------------------------------------------------------------------------
-// Logo fallback
-// ---------------------------------------------------------------------------
-
-/**
- * Return the LibreSign logo URL used as a theme-level fallback.
- */
-function libresign_get_theme_logo_url() {
-	return 'https://github.com/LibreSign/site/raw/refs/heads/main/source/assets/images/logo/logo.svg';
-}
-
-/**
- * Detect whether the rendered custom logo points to a missing local upload.
- */
-function libresign_custom_logo_needs_fallback( $custom_logo_html ) {
-	if ( '' === trim( (string) $custom_logo_html ) ) {
-		return true;
-	}
-
-	if ( ! preg_match( '/<img[^>]+src=["\']([^"\']+)["\']/', (string) $custom_logo_html, $matches ) ) {
-		return true;
-	}
-
-	$logo_url   = html_entity_decode( $matches[1] );
-	$logo_parts = wp_parse_url( $logo_url );
-	$home_parts = wp_parse_url( home_url( '/' ) );
-
-	if ( empty( $logo_parts['host'] ) || empty( $logo_parts['path'] ) ) {
-		return false;
-	}
-
-	if ( empty( $home_parts['host'] ) || $logo_parts['host'] !== $home_parts['host'] ) {
-		return false;
-	}
-
-	if ( 0 !== strpos( $logo_parts['path'], '/wp-content/uploads/' ) ) {
-		return false;
-	}
-
-	$local_file = trailingslashit( ABSPATH ) . ltrim( $logo_parts['path'], '/' );
-
-	return ! file_exists( $local_file );
-}
-
-/**
- * Provide a stable fallback logo when the current site logo upload is missing.
- */
-function libresign_filter_custom_logo( $custom_logo_html, $blog_id ) {
-	if ( ! libresign_custom_logo_needs_fallback( $custom_logo_html ) ) {
-		return $custom_logo_html;
-	}
-
-	$aria_current = is_front_page() && ! is_paged() ? ' aria-current="page"' : '';
-	$alt_text     = get_bloginfo( 'name' );
-
-	return sprintf(
-		'<a href="%1$s" class="custom-logo-link" rel="home"%2$s><img src="%3$s" class="custom-logo" alt="%4$s" decoding="async" fetchpriority="high" /></a>',
-		esc_url( home_url( '/' ) ),
-		$aria_current,
-		esc_url( libresign_get_theme_logo_url() ),
-		esc_attr( $alt_text )
-	);
-}
-add_filter( 'get_custom_logo', 'libresign_filter_custom_logo', 10, 2 );
