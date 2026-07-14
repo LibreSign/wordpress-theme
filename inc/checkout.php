@@ -213,8 +213,13 @@ function libresign_get_guest_purchase_cta( $label = '' ) {
 }
 
 /**
- * Replace WooCommerce product-button / add-to-cart blocks with an account CTA
- * for visitors who are not logged in.
+ * Replace WooCommerce add-to-cart form with an account CTA for visitors who
+ * are not logged in.
+ *
+ * Only the add-to-cart form on single product pages is replaced; the
+ * product-button block in archive/shop listings is left untouched so guests
+ * can still navigate to the product page to configure options before being
+ * asked to sign in.
  */
 function libresign_replace_guest_purchase_ctas( $block_content, $block ) {
 	if ( is_admin() || is_user_logged_in() ) {
@@ -223,7 +228,7 @@ function libresign_replace_guest_purchase_ctas( $block_content, $block ) {
 
 	$block_name = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
 
-	if ( 'woocommerce/product-button' === $block_name || 'woocommerce/add-to-cart-form' === $block_name ) {
+	if ( 'woocommerce/add-to-cart-form' === $block_name ) {
 		return libresign_get_guest_purchase_cta();
 	}
 
