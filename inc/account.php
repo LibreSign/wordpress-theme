@@ -177,6 +177,13 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 		return $content;
 	}
 
+	// wpautop/shortcode_unautop would inject <br> tags inside form HTML on
+	// account pages; remove them before returning any account page output.
+	if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+		remove_filter( 'the_content', 'wpautop' );
+		remove_filter( 'the_content', 'shortcode_unautop' );
+	}
+
 	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
 		if ( libresign_is_password_reset_confirmation() ) {
 			return $content;
