@@ -389,15 +389,6 @@ function libresign_render_lost_password_form() {
  * This keeps the guidance close to the user journey without having to
  * maintain duplicated page content in the editor.
  */
-function libresign_disable_wpautop_on_account_page( $content ) {
-	if ( function_exists( 'is_account_page' ) && is_account_page() ) {
-		remove_filter( 'the_content', 'wpautop' );
-		remove_filter( 'the_content', 'shortcode_unautop' );
-	}
-
-	return $content;
-}
-add_filter( 'the_content', 'libresign_disable_wpautop_on_account_page', 0 );
 
 function libresign_prepend_saas_onboarding_to_content( $content ) {
 	if ( is_admin() || ! in_the_loop() || ! is_main_query() ) {
@@ -407,7 +398,7 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
 		// Confirmation steps need WooCommerce's set-new-password form; only the initial request uses the custom form.
 		if ( libresign_is_password_reset_confirmation() ) {
-			return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
+			return $content;
 		}
 
 		ob_start();
@@ -415,14 +406,10 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 		return ob_get_clean();
 	}
 
-	if ( function_exists( 'is_account_page' ) && is_account_page() && is_user_logged_in() ) {
-		if ( function_exists( 'do_shortcode' ) ) {
-			return do_shortcode( '[woocommerce_my_account]' );
-		}
-
-		return $content;
-	}
-
+	// For account pages the page post_content is empty; WooCommerce needs
+	// the shortcode to render the login/dashboard form.
+	// The woocommerce/myaccount/form-login.php template override handles
+	// the guest login/register form; WooCommerce handles the logged-in dashboard.
 	if ( function_exists( 'is_account_page' ) && is_account_page() ) {
 		return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
 	}
