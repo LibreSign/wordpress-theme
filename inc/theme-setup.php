@@ -18,40 +18,6 @@ add_action( 'after_setup_theme', function () {
 } );
 
 // ---------------------------------------------------------------------------
-// Block styles
-// ---------------------------------------------------------------------------
-
-if ( ! function_exists( 'libresign_block_styles' ) ) :
-	/**
-	 * Register custom block styles.
-	 *
-	 * @since libresign 1.0
-	 */
-	function libresign_block_styles() {
-		register_block_style(
-			'core/post-terms',
-			array(
-				'name'         => 'pill',
-				'label'        => __( 'Pill', 'libresign' ),
-				'inline_style' => '
-				.is-style-pill a,
-				.is-style-pill span:not([class], [data-rich-text-placeholder]) {
-					display: inline-block;
-					background-color: var(--wp--preset--color--base-2);
-					padding: 0.375rem 0.875rem;
-					border-radius: var(--wp--preset--spacing--20);
-				}
-				.is-style-pill a:hover {
-					background-color: var(--wp--preset--color--contrast-3);
-				}',
-			)
-		);
-	}
-endif;
-
-add_action( 'init', 'libresign_block_styles' );
-
-// ---------------------------------------------------------------------------
 // Block stylesheets
 // ---------------------------------------------------------------------------
 
