@@ -332,29 +332,29 @@ function libresign_render_lost_password_form() {
 			</div>
 
 			<div class="libresign-account-shell__hero">
-				<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Acesso', 'libresign' ); ?></p>
-				<h2><?php esc_html_e( 'Recuperar senha', 'libresign' ); ?></h2>
-				<p><?php esc_html_e( 'Informe seu e-mail ou usuário para receber o link de redefinição de senha.', 'libresign' ); ?></p>
+				<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Access', 'libresign' ); ?></p>
+				<h2><?php esc_html_e( 'Reset password', 'libresign' ); ?></h2>
+				<p><?php esc_html_e( 'Enter your email or username to receive a password reset link.', 'libresign' ); ?></p>
 			</div>
 
 			<div class="libresign-account-shell__actions">
-				<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'tab', 'register', $account_url ) ); ?>#libresign-account-shell" data-libresign-open-tab="register"><?php esc_html_e( 'Criar workspace grátis', 'libresign' ); ?></a>
-				<a class="button" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Voltar para entrar', 'libresign' ); ?></a>
+				<a class="button button-primary" href="<?php echo esc_url( add_query_arg( 'tab', 'register', $account_url ) ); ?>#libresign-account-shell" data-libresign-open-tab="register"><?php esc_html_e( 'Create free workspace', 'libresign' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Back to sign in', 'libresign' ); ?></a>
 			</div>
 		</aside>
 
 		<main class="libresign-account-shell__main" tabindex="-1">
-			<div class="libresign-account-shell__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Acesso LibreSign', 'libresign' ); ?>">
-				<a class="libresign-account-shell__tab is-active" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Entrar', 'libresign' ); ?></a>
-				<a class="libresign-account-shell__tab" href="<?php echo esc_url( $lost_password_url ); ?>" aria-selected="true"><?php esc_html_e( 'Esqueci a senha', 'libresign' ); ?></a>
+			<div class="libresign-account-shell__tabs" role="tablist" aria-label="<?php esc_attr_e( 'LibreSign access', 'libresign' ); ?>">
+				<a class="libresign-account-shell__tab is-active" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Sign in', 'libresign' ); ?></a>
+				<a class="libresign-account-shell__tab" href="<?php echo esc_url( $lost_password_url ); ?>" aria-selected="true"><?php esc_html_e( 'Forgot password', 'libresign' ); ?></a>
 			</div>
 
 			<div class="libresign-account-shell__panels">
 				<section class="libresign-account-shell__panel is-active" data-libresign-panel="lost-password" role="tabpanel">
 					<div class="libresign-account-shell__panel-header">
-						<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Esqueci a senha', 'libresign' ); ?></p>
-						<h2><?php esc_html_e( 'Enviar link de redefinição', 'libresign' ); ?></h2>
-						<p><?php esc_html_e( 'Se sua conta existir, enviaremos um e-mail com o próximo passo.', 'libresign' ); ?></p>
+						<p class="libresign-account-shell__eyebrow"><?php esc_html_e( 'Forgot password', 'libresign' ); ?></p>
+						<h2><?php esc_html_e( 'Send reset link', 'libresign' ); ?></h2>
+						<p><?php esc_html_e( 'If your account exists, we will send you an email with the next step.', 'libresign' ); ?></p>
 					</div>
 
 					<?php if ( function_exists( 'wc_print_notices' ) ) : ?>
@@ -365,7 +365,7 @@ function libresign_render_lost_password_form() {
 
 					<form method="post" class="woocommerce-form woocommerce-form-login login lost_reset_password">
 						<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-							<label for="user_login"><?php esc_html_e( 'E-mail ou usuário', 'libresign' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Obrigatório', 'libresign' ); ?></span></label>
+							<label for="user_login"><?php esc_html_e( 'Email or username', 'libresign' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span></label>
 							<input type="text" name="user_login" id="user_login" class="woocommerce-Input woocommerce-Input--text input-text" autocomplete="username" required aria-required="true" />
 						</p>
 
@@ -373,7 +373,7 @@ function libresign_render_lost_password_form() {
 						<?php wp_nonce_field( 'lost_password', 'woocommerce-lost-password-nonce' ); ?>
 
 						<p class="form-row">
-							<button type="submit" class="woocommerce-button button woocommerce-form-login__submit"><?php esc_html_e( 'Enviar link', 'libresign' ); ?></button>
+							<button type="submit" class="woocommerce-button button woocommerce-form-login__submit"><?php esc_html_e( 'Send reset link', 'libresign' ); ?></button>
 						</p>
 					</form>
 				</section>
@@ -489,21 +489,21 @@ function libresign_validate_workspace_registration_fields( $errors, $username, $
 	}
 
 	if ( '' === $full_name ) {
-		$errors->add( 'full_name_required', __( 'Informe seu nome completo.', 'libresign' ) );
+		$errors->add( 'full_name_required', __( 'Please enter your full name.', 'libresign' ) );
 	}
 
 	if ( '' === $email ) {
-		$errors->add( 'email_required', __( 'Informe um e-mail válido.', 'libresign' ) );
+		$errors->add( 'email_required', __( 'Please enter a valid email address.', 'libresign' ) );
 	}
 
 	if ( '' === $password ) {
-		$errors->add( 'password_required', __( 'Informe uma senha.', 'libresign' ) );
+		$errors->add( 'password_required', __( 'Please enter a password.', 'libresign' ) );
 	}
 
 	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$errors->add(
 			'libresign_workspace_terms',
-			__( 'Você precisa aceitar os termos para criar o workspace.', 'libresign' )
+			__( 'You must accept the terms to create your workspace.', 'libresign' )
 		);
 	}
 
@@ -720,13 +720,13 @@ add_action( 'woocommerce_init', function () {
 	woocommerce_register_additional_checkout_field(
 		array(
 			'id'         => 'libresign/cpf-cnpj',
-			'label'      => __( 'CPF ou CNPJ', 'libresign' ),
+			'label'      => __( 'CPF or CNPJ', 'libresign' ),
 			'location'   => 'address',
 			'required'   => false,
 			'type'       => 'text',
 			'attributes' => array(
 				'autocomplete' => 'off',
-				'placeholder'  => __( 'Obrigatório para clientes no Brasil', 'libresign' ),
+				'placeholder'  => __( 'Required for customers in Brazil', 'libresign' ),
 			),
 		)
 	);
@@ -745,7 +745,7 @@ add_action( 'woocommerce_validate_additional_field', function ( \WP_Error $error
 	if ( 'BR' === $country && '' === trim( (string) $field_value ) ) {
 		$errors->add(
 			'libresign-cpf-cnpj-required',
-			__( 'Informe seu CPF ou CNPJ para emissão da nota fiscal.', 'libresign' )
+			__( 'Please enter your CPF or CNPJ for tax invoice issuance.', 'libresign' )
 		);
 	}
 }, 10, 3 );
@@ -762,7 +762,7 @@ function libresign_checkout_policy_checkbox_text( $text ) {
 		sprintf(
 			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
 			esc_url( $policy_url ),
-			esc_html__( 'policies and privacy policy', 'libresign' )
+			esc_html__( 'terms and privacy policy', 'libresign' )
 		)
 	);
 }

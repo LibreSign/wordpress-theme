@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-14T15:46:17+00:00\n"
+"POT-Creation-Date: 2026-07-14T17:37:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: libresign\n"
@@ -59,80 +59,65 @@ msgid "A collection of full page layouts."
 msgstr ""
 
 #: functions.php:335
-msgid "Acesso"
+msgid "Access"
 msgstr ""
 
 #: functions.php:336
-msgid "Recuperar senha"
+msgid "Reset password"
 msgstr ""
 
 #: functions.php:337
-msgid "Informe seu e-mail ou usuário para receber o link de redefinição de senha."
+msgid "Enter your email or username to receive a password reset link."
 msgstr ""
 
 #: functions.php:341
-msgid "Criar workspace grátis"
+msgid "Create free workspace"
 msgstr ""
 
 #: functions.php:342
-msgid "Voltar para entrar"
+msgid "Back to sign in"
 msgstr ""
 
 #: functions.php:347
-msgid "Acesso LibreSign"
+msgid "LibreSign access"
 msgstr ""
 
 #: functions.php:348
-#: woocommerce/myaccount/form-login.php:30
-#: woocommerce/myaccount/form-login.php:61
-msgid "Entrar"
+msgid "Sign in"
 msgstr ""
 
 #: functions.php:349
 #: functions.php:355
-msgid "Esqueci a senha"
+msgid "Forgot password"
 msgstr ""
 
 #: functions.php:356
-msgid "Enviar link de redefinição"
+#: functions.php:376
+msgid "Send reset link"
 msgstr ""
 
 #: functions.php:357
-msgid "Se sua conta existir, enviaremos um e-mail com o próximo passo."
+msgid "If your account exists, we will send you an email with the next step."
 msgstr ""
 
 #: functions.php:368
-#: woocommerce/myaccount/form-login.php:38
-msgid "E-mail ou usuário"
-msgstr ""
-
-#: functions.php:368
-#: woocommerce/myaccount/form-login.php:38
-#: woocommerce/myaccount/form-login.php:45
-#: woocommerce/myaccount/form-login.php:88
-#: woocommerce/myaccount/form-login.php:95
-#: woocommerce/myaccount/form-login.php:102
-msgid "Obrigatório"
-msgstr ""
-
-#: functions.php:376
-msgid "Enviar link"
+msgid "Email or username"
 msgstr ""
 
 #: functions.php:492
-msgid "Informe seu nome completo."
+msgid "Please enter your full name."
 msgstr ""
 
 #: functions.php:496
-msgid "Informe um e-mail válido."
+msgid "Please enter a valid email address."
 msgstr ""
 
 #: functions.php:500
-msgid "Informe uma senha."
+msgid "Please enter a password."
 msgstr ""
 
 #: functions.php:506
-msgid "Você precisa aceitar os termos para criar o workspace."
+msgid "You must accept the terms to create your workspace."
 msgstr ""
 
 #. translators: %s: policy page link
@@ -146,15 +131,15 @@ msgid "Please confirm that you agree with the policies before creating an accoun
 msgstr ""
 
 #: functions.php:723
-msgid "CPF ou CNPJ"
+msgid "CPF or CNPJ"
 msgstr ""
 
 #: functions.php:729
-msgid "Obrigatório para clientes no Brasil"
+msgid "Required for customers in Brazil"
 msgstr ""
 
 #: functions.php:748
-msgid "Informe seu CPF ou CNPJ para emissão da nota fiscal."
+msgid "Please enter your CPF or CNPJ for tax invoice issuance."
 msgstr ""
 
 #. translators: %s: policy page link
@@ -164,7 +149,7 @@ msgid "I agree to the %s before placing the order."
 msgstr ""
 
 #: functions.php:765
-msgid "policies and privacy policy"
+msgid "terms and privacy policy"
 msgstr ""
 
 #: functions.php:778
@@ -1447,34 +1432,61 @@ msgctxt "Call to Action button text"
 msgid "About us"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:45
-#: woocommerce/myaccount/form-login.php:102
+#: woocommerce/myaccount/form-login.php:91
+msgid "Full name"
+msgstr ""
+
+#. translators: %s: URL of the terms and privacy policy page
+#: woocommerce/myaccount/form-login.php:124
+#, php-format
+msgid "I have read and agree to the <a href=\"%s\" target=\"_blank\" rel=\"noopener noreferrer\">Terms of Use and Privacy Policy of LibreSign</a>, including the processing of data for service operation."
+msgstr ""
+
+#: woocommerce/myaccount/form-login.php:169
+#: woocommerce/myaccount/form-login.php:200
+msgid "Entrar"
+msgstr ""
+
+#: woocommerce/myaccount/form-login.php:177
+msgid "E-mail ou usuário"
+msgstr ""
+
+#: woocommerce/myaccount/form-login.php:177
+#: woocommerce/myaccount/form-login.php:184
+#: woocommerce/myaccount/form-login.php:227
+#: woocommerce/myaccount/form-login.php:234
+#: woocommerce/myaccount/form-login.php:241
+msgid "Obrigatório"
+msgstr ""
+
+#: woocommerce/myaccount/form-login.php:184
+#: woocommerce/myaccount/form-login.php:241
 msgid "Senha"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:55
+#: woocommerce/myaccount/form-login.php:194
 msgid "Lembrar de mim"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:65
+#: woocommerce/myaccount/form-login.php:204
 msgid "Esqueceu a senha?"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:77
-#: woocommerce/myaccount/form-login.php:135
+#: woocommerce/myaccount/form-login.php:216
+#: woocommerce/myaccount/form-login.php:274
 msgid "Criar conta"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:88
+#: woocommerce/myaccount/form-login.php:227
 msgid "Nome completo"
 msgstr ""
 
-#: woocommerce/myaccount/form-login.php:95
+#: woocommerce/myaccount/form-login.php:234
 msgid "E-mail"
 msgstr ""
 
 #. translators: %s: link to terms and privacy policy page
-#: woocommerce/myaccount/form-login.php:121
+#: woocommerce/myaccount/form-login.php:260
 #, php-format
 msgid "Li e aceito os <a href=\"%s\" target=\"_blank\" rel=\"noopener noreferrer\">Termos de Uso e a Política de Privacidade do LibreSign</a>, incluindo o tratamento de dados para operação do serviço."
 msgstr ""
