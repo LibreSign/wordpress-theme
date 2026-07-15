@@ -15,5 +15,6 @@ require_once __DIR__ . '/inc/account.php';
 require_once __DIR__ . '/inc/registration.php';
 require_once __DIR__ . '/inc/product.php';
 require_once __DIR__ . '/inc/billing.php';
+require_once __DIR__ . '/inc/cpf-cnpj.php';
 require_once __DIR__ . '/inc/checkout.php';
 require_once __DIR__ . '/inc/guest-access.php';
