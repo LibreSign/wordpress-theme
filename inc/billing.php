@@ -96,6 +96,10 @@ add_action( 'wp_footer', function () {
 	( function () {
 		var FIELD_SELECTOR = '.wc-block-components-address-form__libresign-cpf-cnpj';
 
+		// Clean label text (without WooCommerce's appended " (optional)"),
+		// provided by PHP so it is already translated for the active locale.
+		var CLEAN_LABEL = <?php echo wp_json_encode( __( 'CPF or CNPJ', 'libresign' ) ); ?>;
+
 		// WooCommerce Blocks renders the billing country as a native <select>.
 		var COUNTRY_SELECTORS = [
 			'#billing-country',
@@ -118,19 +122,31 @@ add_action( 'wp_footer', function () {
 			var countryField = getCountryField();
 			var isBrazil = countryField ? countryField.value === 'BR' : false;
 
-			// Show/hide only — no manual * addition.
-			// Server-side (woocommerce_get_contextual_fields_for_location) marks
-			// the field as required: true for BR, so WooCommerce handles the
-			// error message if left empty.
 			row.style.display = isBrazil ? 'block' : 'none';
+
+			if ( isBrazil ) {
+				// WooCommerce React appends " (optional)" to the label because
+				// the field is registered with required: false (necessary so
+				// non-BR customers are not blocked by client-side validation).
+				// We remove it for BR customers who will see a server-side
+				// error if they leave the field empty.
+				// Disconnect the observer BEFORE mutating the DOM to avoid an
+				// infinite loop (DOM change → observer fires → update() → loop).
+				var label = row.querySelector( 'label' );
+				if ( label && label.textContent.trim() !== CLEAN_LABEL ) {
+					observer.disconnect();
+					label.textContent = CLEAN_LABEL;
+					observer.observe( document.body, OBS_OPTIONS );
+				}
+			}
 		}
 
-		// Re-run on any DOM change (React re-renders) and on country change events.
+		var OBS_OPTIONS = { childList: true, subtree: true };
 		var observer = new MutationObserver( update );
 
 		function init() {
 			update();
-			observer.observe( document.body, { childList: true, subtree: true } );
+			observer.observe( document.body, OBS_OPTIONS );
 			document.body.addEventListener( 'change', function ( e ) {
 				if ( e.target && COUNTRY_SELECTORS.some( function ( s ) {
 					return e.target.matches( s );
