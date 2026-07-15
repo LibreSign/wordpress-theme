@@ -39,14 +39,17 @@ add_action( 'woocommerce_init', function () {
  * Require CPF/CNPJ only when the billing country is Brazil — server-side.
  *
  * woocommerce_get_contextual_fields_for_location lets us override the field
- * configuration at request time, so we can make it truly required for BR
- * without breaking checkout for other countries (which would happen if we
- * registered it as required: true globally).
+ * required flag at request time based on the billing address country, so we
+ * can make it truly required for BR without breaking checkout for other
+ * countries.
+ *
+ * The decision is based exclusively on the billing address country, NOT on
+ * browser language or site locale. A customer browsing in English from England
+ * with a Brazilian billing address will have this field required.
  *
  * The field is registered as required: false so the React client does not
  * block non-BR customers. This filter flips required to true for BR before
- * WooCommerce runs its own "required field is empty" check, so no separate
- * woocommerce_validate_additional_field hook is needed.
+ * WooCommerce runs its own "required field is empty" check.
  */
 add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $fields, string $location, $document_object ) {
 	if ( ! isset( $fields['libresign/cpf-cnpj'] ) ) {
@@ -69,12 +72,15 @@ add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $
 }, 10, 3 );
 
 /**
- * Conditionally show/hide the CPF/CNPJ field based on the billing country.
+ * Show the CPF/CNPJ field only when the billing address country is Brazil.
+ *
+ * The decision is based exclusively on the billing address country (the
+ * country the customer enters in the checkout form), NOT on the browser
+ * language or site locale. A customer browsing in English from England with
+ * a Brazilian billing address will see and be required to fill this field.
  *
  * WooCommerce Blocks renders additional fields for all countries; this script
- * hides the row when the country is not Brazil and marks it as required (with
- * a visible asterisk) when Brazil is selected.
- *
+ * hides the row when billing country ≠ BR and shows it when billing country = BR.
  * Uses a MutationObserver so it survives React re-renders.
  */
 add_action( 'wp_footer', function () {
