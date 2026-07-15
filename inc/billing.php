@@ -98,7 +98,7 @@ add_action( 'wp_footer', function () {
 			var countryField = getCountryField();
 			var isBrazil = countryField ? countryField.value === 'BR' : false;
 
-			row.style.display = isBrazil ? '' : 'none';
+			row.style.display = isBrazil ? 'block' : 'none';
 
 			var input = row.querySelector( 'input' );
 			if ( input ) {
