@@ -340,40 +340,64 @@ add_action( 'wp_footer', function () {
 			if ( ! validationDispatch || ! checkoutSelect ) return;
 
 			var wasBeforeProcessing = false;
+			// Re-entrancy guard: wp.data notifies subscribers synchronously inside
+			// dispatch(). Without this flag, calling setValidationErrors /
+			// clearValidationError from the subscriber triggers the subscriber again
+			// before wasBeforeProcessing is updated, causing infinite recursion and
+			// a "Maximum call stack size exceeded" error that permanently freezes
+			// the form until the page is refreshed.
+			var isDispatching = false;
 
 			wp.data.subscribe( function () {
-				var isBefore = checkoutSelect.isBeforeProcessing();
+				if ( isDispatching ) return;
 
-				if ( isBefore && ! wasBeforeProcessing ) {
+				var isBefore = checkoutSelect.isBeforeProcessing();
+				var prevWas  = wasBeforeProcessing;
+				// Update wasBeforeProcessing BEFORE dispatching so that any
+				// re-entrant subscriber call sees the updated value and exits early
+				// via the isDispatching guard above.
+				wasBeforeProcessing = isBefore;
+
+				if ( isBefore && ! prevWas ) {
 					// Checkout just entered "before-processing" phase.
 					// Validate CPF/CNPJ here — WooCommerce Blocks checks the
 					// validation store AFTER this subscriber runs and stops
 					// processing if errors are present.
-					if ( getCountry() === 'BR' ) {
-						var cpfVal = getCpfValue();
-						if ( ! cpfVal ) {
-							validationDispatch.setValidationErrors( {
-								[ FIELD_KEY ]: { message: ERROR_MSG, hidden: false }
-							} );
-						} else if ( ! validateCpfCnpj( cpfVal ) ) {
-							validationDispatch.setValidationErrors( {
-								[ FIELD_KEY ]: { message: INVALID_MSG, hidden: false }
-							} );
+					isDispatching = true;
+					try {
+						if ( getCountry() === 'BR' ) {
+							var cpfVal = getCpfValue();
+							if ( ! cpfVal ) {
+								validationDispatch.setValidationErrors( {
+									[ FIELD_KEY ]: { message: ERROR_MSG, hidden: false }
+								} );
+							} else if ( ! validateCpfCnpj( cpfVal ) ) {
+								validationDispatch.setValidationErrors( {
+									[ FIELD_KEY ]: { message: INVALID_MSG, hidden: false }
+								} );
+							} else {
+								validationDispatch.clearValidationError( FIELD_KEY );
+							}
 						} else {
 							validationDispatch.clearValidationError( FIELD_KEY );
 						}
-					} else {
-						validationDispatch.clearValidationError( FIELD_KEY );
+					} finally {
+						isDispatching = false;
 					}
 				}
-
-				wasBeforeProcessing = isBefore;
 			} );
 
 			// Clear the error as soon as the user starts typing in the field.
+			// Guard against triggering the re-entrancy scenario in the subscriber.
 			document.addEventListener( 'input', function ( e ) {
-				if ( e.target && e.target.id === 'billing-libresign-cpf-cnpj' && e.target.value.trim() ) {
-					validationDispatch.clearValidationError( FIELD_KEY );
+				if ( e.target && e.target.id === 'billing-libresign-cpf-cnpj'
+						&& e.target.value.trim() && ! isDispatching ) {
+					isDispatching = true;
+					try {
+						validationDispatch.clearValidationError( FIELD_KEY );
+					} finally {
+						isDispatching = false;
+					}
 				}
 			} );
 		}
