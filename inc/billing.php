@@ -66,6 +66,7 @@ add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $
 	if ( is_object( $document_object ) && method_exists( $document_object, 'get_customer_data' ) ) {
 		$customer = $document_object->get_customer_data();
 		$country  = $customer['billing_address']['country'] ?? '';
+		error_log( 'libresign billing.php: country from get_customer_data()=' . $country . ', class=' . get_class( $document_object ) );
 	}
 
 	// Fallback for classic WC_Customer / WC_Order objects (non-Blocks contexts).
@@ -108,66 +109,103 @@ add_action( 'wp_footer', function () {
 	</style>
 	<script>
 	( function () {
-		var FIELD_SELECTOR = '.wc-block-components-address-form__libresign-cpf-cnpj';
+		var FIELD_KEY     = 'billing_libresign/cpf-cnpj';
+		var FIELD_CSS     = '.wc-block-components-address-form__libresign-cpf-cnpj';
+		var CLEAN_LABEL   = <?php echo wp_json_encode( __( 'CPF or CNPJ', 'libresign' ) ); ?>;
+		var ERROR_MSG     = <?php echo wp_json_encode( __( 'Please enter your CPF or CNPJ.', 'libresign' ) ); ?>;
+		var COUNTRY_SELECTORS = [ '#billing-country', '[name="billing_country"]', '[data-testid="select-country"]' ];
+		var OBS_OPTIONS   = { childList: true, subtree: true };
 
-		// Clean label text (without WooCommerce's appended " (optional)"),
-		// provided by PHP so it is already translated for the active locale.
-		var CLEAN_LABEL = <?php echo wp_json_encode( __( 'CPF or CNPJ', 'libresign' ) ); ?>;
-
-		// WooCommerce Blocks renders the billing country as a native <select>.
-		var COUNTRY_SELECTORS = [
-			'#billing-country',
-			'[name="billing_country"]',
-			'[data-testid="select-country"]',
-		];
-
-		function getCountryField() {
+		function getCountry() {
 			for ( var i = 0; i < COUNTRY_SELECTORS.length; i++ ) {
 				var el = document.querySelector( COUNTRY_SELECTORS[ i ] );
-				if ( el ) return el;
+				if ( el ) return el.value;
 			}
-			return null;
+			return '';
 		}
 
-		function update() {
-			var row = document.querySelector( FIELD_SELECTOR );
+		function getCpfValue() {
+			var input = document.querySelector( '#billing-libresign-cpf-cnpj' );
+			return input ? input.value.trim() : '';
+		}
+
+		// ---------------------------------------------------------------------------
+		// Show / hide field based on billing country (same logic as before)
+		// ---------------------------------------------------------------------------
+		var observer = new MutationObserver( updateVisibility );
+
+		function updateVisibility() {
+			var row = document.querySelector( FIELD_CSS );
 			if ( ! row ) return;
-
-			var countryField = getCountryField();
-			var isBrazil = countryField ? countryField.value === 'BR' : false;
-
+			var isBrazil = getCountry() === 'BR';
 			row.style.display = isBrazil ? 'block' : 'none';
 
-			if ( isBrazil ) {
-				// WooCommerce React appends " (optional)" to the label because
-				// the field is registered with required: false (necessary so
-				// non-BR customers are not blocked by client-side validation).
-				// We remove it for BR customers who will see a server-side
-				// error if they leave the field empty.
-				// Disconnect the observer BEFORE mutating the DOM to avoid an
-				// infinite loop (DOM change → observer fires → update() → loop).
-				var label = row.querySelector( 'label' );
-				if ( label && label.textContent.trim() !== CLEAN_LABEL ) {
-					observer.disconnect();
-					label.textContent = CLEAN_LABEL;
-					observer.observe( document.body, OBS_OPTIONS );
-				}
+			// Remove "(optional)" suffix — disconnect observer first to prevent loop
+			var label = row.querySelector( 'label' );
+			if ( isBrazil && label && label.textContent.trim() !== CLEAN_LABEL ) {
+				observer.disconnect();
+				label.textContent = CLEAN_LABEL;
+				observer.observe( document.body, OBS_OPTIONS );
 			}
 		}
 
-		var OBS_OPTIONS = { childList: true, subtree: true };
-		var observer = new MutationObserver( update );
+		// ---------------------------------------------------------------------------
+		// WooCommerce Blocks validation via wp.data
+		// Uses isBeforeProcessing() + setValidationErrors() so the error appears
+		// exactly the same way as other required billing fields (red border +
+		// message below the field).
+		// ---------------------------------------------------------------------------
+		function initValidation() {
+			if ( ! window.wp || ! window.wp.data ) return;
 
+			var validationDispatch = wp.data.dispatch( 'wc/store/validation' );
+			var checkoutSelect    = wp.data.select( 'wc/store/checkout' );
+			if ( ! validationDispatch || ! checkoutSelect ) return;
+
+			var wasBeforeProcessing = false;
+
+			wp.data.subscribe( function () {
+				var isBefore = checkoutSelect.isBeforeProcessing();
+
+				if ( isBefore && ! wasBeforeProcessing ) {
+					// Checkout just entered "before-processing" phase.
+					// Validate CPF/CNPJ here — WooCommerce Blocks checks the
+					// validation store AFTER this subscriber runs and stops
+					// processing if errors are present.
+					if ( getCountry() === 'BR' && ! getCpfValue() ) {
+						validationDispatch.setValidationErrors( {
+							[ FIELD_KEY ]: { message: ERROR_MSG, hidden: false }
+						} );
+					} else {
+						validationDispatch.clearValidationError( FIELD_KEY );
+					}
+				}
+
+				wasBeforeProcessing = isBefore;
+			} );
+
+			// Clear the error as soon as the user starts typing in the field.
+			document.addEventListener( 'input', function ( e ) {
+				if ( e.target && e.target.id === 'billing-libresign-cpf-cnpj' && e.target.value.trim() ) {
+					validationDispatch.clearValidationError( FIELD_KEY );
+				}
+			} );
+		}
+
+		// ---------------------------------------------------------------------------
+		// Bootstrap
+		// ---------------------------------------------------------------------------
 		function init() {
-			update();
+			updateVisibility();
 			observer.observe( document.body, OBS_OPTIONS );
 			document.body.addEventListener( 'change', function ( e ) {
 				if ( e.target && COUNTRY_SELECTORS.some( function ( s ) {
 					return e.target.matches( s );
 				} ) ) {
-					update();
+					updateVisibility();
 				}
 			} );
+			initValidation();
 		}
 
 		if ( document.readyState === 'loading' ) {
