@@ -9,6 +9,7 @@
  */
 
 require_once __DIR__ . '/inc/theme-setup.php';
+require_once __DIR__ . '/inc/logo.php';
 require_once __DIR__ . '/inc/footer-fragment.php';
 require_once __DIR__ . '/inc/github-site-webhook.php';
 require_once __DIR__ . '/inc/account.php';
