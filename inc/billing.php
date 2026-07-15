@@ -36,21 +36,36 @@ add_action( 'woocommerce_init', function () {
 } );
 
 /**
- * Require CPF/CNPJ only when the billing country is Brazil.
+ * Require CPF/CNPJ only when the billing country is Brazil — server-side.
+ *
+ * woocommerce_get_contextual_fields_for_location lets us override the field
+ * configuration at request time, so we can make it truly required for BR
+ * without breaking checkout for other countries (which would happen if we
+ * registered it as required: true globally).
+ *
+ * The field is registered as required: false so the React client does not
+ * block non-BR customers. This filter flips required to true for BR before
+ * WooCommerce runs its own "required field is empty" check, so no separate
+ * woocommerce_validate_additional_field hook is needed.
  */
-add_action( 'woocommerce_validate_additional_field', function ( \WP_Error $errors, string $field_key, $field_value ) {
-	if ( 'libresign/cpf-cnpj' !== $field_key ) {
-		return;
+add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $fields, string $location, $document_object ) {
+	if ( ! isset( $fields['libresign/cpf-cnpj'] ) ) {
+		return $fields;
 	}
 
-	$country = function_exists( 'WC' ) && WC()->customer ? WC()->customer->get_billing_country() : '';
-
-	if ( 'BR' === $country && '' === trim( (string) $field_value ) ) {
-		$errors->add(
-			'libresign-cpf-cnpj-required',
-			__( 'Please enter your CPF or CNPJ for tax invoice issuance.', 'libresign' )
-		);
+	$country = '';
+	if ( is_object( $document_object ) && method_exists( $document_object, 'get_billing_address' ) ) {
+		$billing  = $document_object->get_billing_address();
+		$country  = $billing['country'] ?? '';
 	}
+
+	if ( '' === $country && function_exists( 'WC' ) && WC()->customer ) {
+		$country = WC()->customer->get_billing_country();
+	}
+
+	$fields['libresign/cpf-cnpj']['required'] = ( 'BR' === $country );
+
+	return $fields;
 }, 10, 3 );
 
 /**
@@ -75,8 +90,7 @@ add_action( 'wp_footer', function () {
 	( function () {
 		var FIELD_SELECTOR = '.wc-block-components-address-form__libresign-cpf-cnpj';
 
-		// WooCommerce Blocks renders the billing country as a native select
-		// inside the billing address section.
+		// WooCommerce Blocks renders the billing country as a native <select>.
 		var COUNTRY_SELECTORS = [
 			'#billing-country',
 			'[name="billing_country"]',
@@ -98,28 +112,11 @@ add_action( 'wp_footer', function () {
 			var countryField = getCountryField();
 			var isBrazil = countryField ? countryField.value === 'BR' : false;
 
+			// Show/hide only — no manual * addition.
+			// Server-side (woocommerce_get_contextual_fields_for_location) marks
+			// the field as required: true for BR, so WooCommerce handles the
+			// error message if left empty.
 			row.style.display = isBrazil ? 'block' : 'none';
-
-			var input = row.querySelector( 'input' );
-			if ( input ) {
-				input.required = isBrazil;
-				input.setAttribute( 'aria-required', isBrazil ? 'true' : 'false' );
-			}
-
-			// Add/remove required asterisk beside the label.
-			var label = row.querySelector( 'label' );
-			if ( label ) {
-				var existing = label.querySelector( '.libresign-required-star' );
-				if ( isBrazil && ! existing ) {
-					var star = document.createElement( 'span' );
-					star.className = 'libresign-required-star required';
-					star.setAttribute( 'aria-hidden', 'true' );
-					star.textContent = ' *';
-					label.appendChild( star );
-				} else if ( ! isBrazil && existing ) {
-					existing.remove();
-				}
-			}
 		}
 
 		// Re-run on any DOM change (React re-renders) and on country change events.
