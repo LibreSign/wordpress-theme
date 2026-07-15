@@ -3,9 +3,9 @@
  * CPF and CNPJ validation for Brazilian customers.
  *
  * Owns the complete lifecycle of the libresign/cpf-cnpj checkout field:
- * registration, required-for-BR rule, Módulo 11 validation (PHP + JS), and
- * the WooCommerce Blocks hooks that enforce it. Show/hide display logic
- * lives in inc/billing.php.
+ * registration, required-for-BR rule, Módulo 11 validation (PHP + JS),
+ * field visibility (show/hide by billing country), and the WooCommerce Blocks
+ * hooks that enforce it.
  *
  * @package libresign
  */
@@ -206,23 +206,34 @@ add_action( 'woocommerce_blocks_validate_additional_checkout_field', function ( 
 }, 10, 3 );
 
 /**
- * Client-side CPF/CNPJ validation via WooCommerce Blocks wp.data stores.
+ * Client-side script for the CPF/CNPJ checkout field.
  *
- * Mirrors the PHP algorithms above so the user gets native WooCommerce Blocks
- * error feedback (red border + message below the field) on the first submit
- * attempt, without waiting for a server round-trip. The same re-entrancy guard
- * that protects the wp.data subscriber also guards the input event listener so
- * that neither can trigger the other in an infinite dispatch loop.
+ * Outputs a single inline script that handles two concerns:
+ *  1. Visibility — hides the field for non-BR customers and reveals it when
+ *     the billing country is Brazil, surviving React re-renders via a
+ *     MutationObserver.
+ *  2. Validation — mirrors the PHP Módulo 11 algorithms above so the user
+ *     gets native WooCommerce Blocks error feedback (red border + message
+ *     below the field) without a server round-trip. A re-entrancy guard
+ *     prevents the wp.data subscriber from triggering itself in an infinite
+ *     dispatch loop.
  */
 add_action( 'wp_footer', function () {
 	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
 		return;
 	}
 	?>
+	<style>
+		/* Initially hidden; JavaScript reveals it only for Brazil */
+		.wc-block-components-address-form__libresign-cpf-cnpj { display: none; }
+	</style>
 	<script>
 	( function () {
 		var FIELD_KEY         = 'billing_libresign/cpf-cnpj';
+		var FIELD_CSS         = '.wc-block-components-address-form__libresign-cpf-cnpj';
+		var CLEAN_LABEL       = <?php echo wp_json_encode( __( 'CPF or CNPJ', 'libresign' ) ); ?>;
 		var COUNTRY_SELECTORS = [ '#billing-country', '[name="billing_country"]', '[data-testid="select-country"]' ];
+		var OBS_OPTIONS       = { childList: true, subtree: true };
 		var ERROR_MSG         = <?php echo wp_json_encode( __( 'Please enter your CPF or CNPJ.', 'libresign' ) ); ?>;
 		var INVALID_MSG       = <?php echo wp_json_encode( __( 'Please enter a valid CPF or CNPJ.', 'libresign' ) ); ?>;
 
@@ -237,6 +248,26 @@ add_action( 'wp_footer', function () {
 		function getCpfValue() {
 			var input = document.querySelector( '#billing-libresign-cpf-cnpj' );
 			return input ? input.value.trim() : '';
+		}
+
+		// -----------------------------------------------------------------------
+		// Show / hide field based on billing country
+		// -----------------------------------------------------------------------
+		var observer = new MutationObserver( updateVisibility );
+
+		function updateVisibility() {
+			var row = document.querySelector( FIELD_CSS );
+			if ( ! row ) return;
+			var isBrazil = getCountry() === 'BR';
+			row.style.display = isBrazil ? 'block' : 'none';
+
+			// Remove "(optional)" suffix — disconnect observer first to prevent loop
+			var label = row.querySelector( 'label' );
+			if ( isBrazil && label && label.textContent.trim() !== CLEAN_LABEL ) {
+				observer.disconnect();
+				label.textContent = CLEAN_LABEL;
+				observer.observe( document.body, OBS_OPTIONS );
+			}
 		}
 
 		// -----------------------------------------------------------------------
@@ -366,10 +397,26 @@ add_action( 'wp_footer', function () {
 			} );
 		}
 
-		if ( document.readyState === 'loading' ) {
-			document.addEventListener( 'DOMContentLoaded', initValidation );
-		} else {
+		// -----------------------------------------------------------------------
+		// Bootstrap
+		// -----------------------------------------------------------------------
+		function init() {
+			updateVisibility();
+			observer.observe( document.body, OBS_OPTIONS );
+			document.body.addEventListener( 'change', function ( e ) {
+				if ( e.target && COUNTRY_SELECTORS.some( function ( s ) {
+					return e.target.matches( s );
+				} ) ) {
+					updateVisibility();
+				}
+			} );
 			initValidation();
+		}
+
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', init );
+		} else {
+			init();
 		}
 	} )();
 	</script>
