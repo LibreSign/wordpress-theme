@@ -19,14 +19,17 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Return the LibreSign logo URL for the given display context.
  *
+ * - 'light': dark-coloured logo, legible on light/white backgrounds (default).
+ * - 'dark':  light-coloured logo, legible on dark backgrounds.
+ *
  * @param string $variant 'light' for light backgrounds (default), 'dark' for dark.
  * @return string
  */
 function libresign_get_theme_logo_url( string $variant = 'light' ): string {
 	$base = 'https://github.com/LibreSign/site/raw/refs/heads/main/source/assets/images/logo/';
 	return 'dark' === $variant
-		? $base . 'logo.svg'
-		: $base . 'logo-2.svg';
+		? $base . 'logo-2.svg'   // pale logo — legible on dark backgrounds
+		: $base . 'logo.svg';    // dark logo  — legible on light backgrounds
 }
 
 /**
