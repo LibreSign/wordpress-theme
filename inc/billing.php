@@ -57,9 +57,23 @@ add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $
 	}
 
 	$country = '';
-	if ( is_object( $document_object ) && method_exists( $document_object, 'get_billing_address' ) ) {
-		$billing  = $document_object->get_billing_address();
-		$country  = $billing['country'] ?? '';
+
+	// DocumentObject (WooCommerce Blocks Store API) exposes the request's
+	// billing address via get_customer_data()['billing_address']['country'].
+	// This is populated directly from the checkout REST request, so it
+	// reflects the country the customer is submitting — not the browser
+	// language and not any previously saved billing address.
+	if ( is_object( $document_object ) && method_exists( $document_object, 'get_customer_data' ) ) {
+		$customer = $document_object->get_customer_data();
+		$country  = $customer['billing_address']['country'] ?? '';
+	}
+
+	// Fallback for classic WC_Customer / WC_Order objects (non-Blocks contexts).
+	if ( '' === $country ) {
+		if ( is_object( $document_object ) && method_exists( $document_object, 'get_billing_address' ) ) {
+			$billing = $document_object->get_billing_address();
+			$country = $billing['country'] ?? '';
+		}
 	}
 
 	if ( '' === $country && function_exists( 'WC' ) && WC()->customer ) {
