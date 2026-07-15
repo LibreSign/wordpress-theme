@@ -17,10 +17,16 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Return the LibreSign logo URL used as a theme-level fallback.
+ * Return the LibreSign logo URL for the given display context.
+ *
+ * @param string $variant 'light' for light backgrounds (default), 'dark' for dark.
+ * @return string
  */
-function libresign_get_theme_logo_url() {
-	return 'https://github.com/LibreSign/site/raw/refs/heads/main/source/assets/images/logo/logo.svg';
+function libresign_get_theme_logo_url( string $variant = 'light' ): string {
+	$base = 'https://github.com/LibreSign/site/raw/refs/heads/main/source/assets/images/logo/';
+	return 'dark' === $variant
+		? $base . 'logo.svg'
+		: $base . 'logo-2.svg';
 }
 
 /**
@@ -97,19 +103,39 @@ function libresign_custom_logo_needs_fallback( $custom_logo_html ) {
  * must resolve to a usable image even in environments where the local uploads
  * directory has not been seeded (fresh Docker volumes, staging, etc.).
  *
- * Patches the existing logo HTML in-place — replaces only src and removes
- * srcset/sizes — so the fallback keeps the width, height, and CSS classes
- * that WordPress generated from the block settings.
+ * Patches the existing logo HTML in-place:
+ *  1. Removes srcset and sizes (the thumbnail files likely do not exist).
+ *  2. Sets src to the light-background logo (logo-2.svg) as the default.
+ *  3. Wraps the <img> in a <picture> element so the browser picks the correct
+ *     variant from the system color-scheme preference without JavaScript.
  */
 function libresign_filter_custom_logo( $custom_logo_html, $blog_id ) {
 	if ( ! libresign_custom_logo_needs_fallback( $custom_logo_html ) ) {
 		return $custom_logo_html;
 	}
 
-	$fallback_src = esc_url( libresign_get_theme_logo_url() );
-	$patched      = preg_replace( '/\ssrcset=["\'][^"\']*["\']/', '', $custom_logo_html );
-	$patched      = preg_replace( '/\ssizes=["\'][^"\']*["\']/', '', $patched );
-	$patched      = preg_replace( '/(<img[^>]+)src=["\'][^"\']*["\']/', '$1src="' . $fallback_src . '"', $patched );
+	$logo_light = esc_url( libresign_get_theme_logo_url( 'light' ) );
+	$logo_dark  = esc_url( libresign_get_theme_logo_url( 'dark' ) );
+
+	// Remove srcset/sizes and set src to the light-background logo.
+	$patched = preg_replace( '/\ssrcset=["\'][^"\']*["\']/', '', $custom_logo_html );
+	$patched = preg_replace( '/\ssizes=["\'][^"\']*["\']/', '', $patched );
+	$patched = preg_replace(
+		'/(<img[^>]+)src=["\'][^"\']*["\']/',
+		'$1src="' . $logo_light . '"',
+		$patched
+	);
+
+	// Wrap <img> in <picture> for automatic dark/light switching.
+	$patched = preg_replace(
+		'/(<img[^>]+>)/',
+		'<picture>'
+			. '<source media="(prefers-color-scheme: dark)" srcset="' . $logo_dark . '">' 
+			. '<source media="(prefers-color-scheme: light)" srcset="' . $logo_light . '">'
+			. '$1'
+			. '</picture>',
+		$patched
+	);
 
 	return $patched ?: $custom_logo_html;
 }
