@@ -1,6 +1,6 @@
 <?php
 /**
- * Theme setup: text domain, block stylesheets and pattern categories.
+ * Theme setup: text domain and block stylesheets.
  *
  * @package libresign
  */
@@ -40,27 +40,4 @@ if ( ! function_exists( 'libresign_block_stylesheets' ) ) :
 endif;
 
 add_action( 'init', 'libresign_block_stylesheets' );
-
-// ---------------------------------------------------------------------------
-// Block pattern categories
-// ---------------------------------------------------------------------------
-
-if ( ! function_exists( 'libresign_pattern_categories' ) ) :
-	/**
-	 * Register block pattern categories.
-	 *
-	 * @since libresign 1.0
-	 */
-	function libresign_pattern_categories() {
-		register_block_pattern_category(
-			'libresign_page',
-			array(
-				'label'       => _x( 'Pages', 'Block pattern category', 'libresign' ),
-				'description' => __( 'A collection of full page layouts.', 'libresign' ),
-			)
-		);
-	}
-endif;
-
-add_action( 'init', 'libresign_pattern_categories' );
 
