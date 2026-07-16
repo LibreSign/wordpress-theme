@@ -192,13 +192,13 @@ add_action( 'woocommerce_blocks_validate_additional_checkout_field', function ( 
 	$digits_only = preg_replace( '/[^0-9]/', '', $value );
 	$stripped    = strtoupper( preg_replace( '/[\.\-\/]/', '', $value ) );
 
-	if ( 11 === strlen( $digits_only ) ) {
-		if ( ! libresign_validate_cpf( $value ) ) {
-			$errors->add( 'invalid_cpf', __( 'Please enter a valid CPF.', 'libresign' ) );
-		}
-	} elseif ( 14 === strlen( $stripped ) ) {
+	if ( 14 === strlen( $stripped ) ) {
 		if ( ! libresign_validate_cnpj( $value ) ) {
 			$errors->add( 'invalid_cnpj', __( 'Please enter a valid CNPJ.', 'libresign' ) );
+		}
+	} elseif ( 11 === strlen( $digits_only ) ) {
+		if ( ! libresign_validate_cpf( $value ) ) {
+			$errors->add( 'invalid_cpf', __( 'Please enter a valid CPF.', 'libresign' ) );
 		}
 	} else {
 		$errors->add( 'invalid_cpf_cnpj', __( 'Please enter a valid CPF (11 digits) or CNPJ (14 characters).', 'libresign' ) );
@@ -321,8 +321,8 @@ add_action( 'wp_footer', function () {
 		function validateCpfCnpj( value ) {
 			var digitsOnly = value.replace( /[^0-9]/g, '' );
 			var stripped   = value.replace( /[.\-\/]/g, '' ).toUpperCase();
-			if ( digitsOnly.length === 11 ) return validateCpf( digitsOnly );
 			if ( stripped.length === 14 )   return validateCnpj( stripped );
+			if ( digitsOnly.length === 11 ) return validateCpf( digitsOnly );
 			return false;
 		}
 
