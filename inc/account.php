@@ -186,7 +186,7 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 
 	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
 		if ( libresign_is_password_reset_confirmation() ) {
-			return $content;
+			return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
 		}
 
 		ob_start();
