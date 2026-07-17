@@ -36,56 +36,6 @@ add_action( 'woocommerce_init', function () {
 } );
 
 /**
- * Require CPF/CNPJ only when the billing country is Brazil — server-side.
- *
- * woocommerce_get_contextual_fields_for_location lets us override the field
- * required flag at request time based on the billing address country, so we
- * can make it truly required for BR without breaking checkout for other
- * countries.
- *
- * The decision is based exclusively on the billing address country, NOT on
- * browser language or site locale. A customer browsing in English from England
- * with a Brazilian billing address will have this field required.
- *
- * The field is registered as required: false so the React client does not
- * block non-BR customers. This filter flips required to true for BR before
- * WooCommerce runs its own "required field is empty" check.
- */
-add_filter( 'woocommerce_get_contextual_fields_for_location', function ( array $fields, string $location, $document_object ) {
-	if ( ! isset( $fields['libresign/cpf-cnpj'] ) ) {
-		return $fields;
-	}
-
-	$country = '';
-
-	// DocumentObject (WooCommerce Blocks Store API) exposes the request's
-	// billing address via get_customer_data()['billing_address']['country'].
-	// This is populated directly from the checkout REST request, so it
-	// reflects the country the customer is submitting — not the browser
-	// language and not any previously saved billing address.
-	if ( is_object( $document_object ) && method_exists( $document_object, 'get_customer_data' ) ) {
-		$customer = $document_object->get_customer_data();
-		$country  = $customer['billing_address']['country'] ?? '';
-	}
-
-	// Fallback for classic WC_Customer / WC_Order objects (non-Blocks contexts).
-	if ( '' === $country ) {
-		if ( is_object( $document_object ) && method_exists( $document_object, 'get_billing_address' ) ) {
-			$billing = $document_object->get_billing_address();
-			$country = $billing['country'] ?? '';
-		}
-	}
-
-	if ( '' === $country && function_exists( 'WC' ) && WC()->customer ) {
-		$country = WC()->customer->get_billing_country();
-	}
-
-	$fields['libresign/cpf-cnpj']['required'] = ( 'BR' === $country );
-
-	return $fields;
-}, 10, 3 );
-
-/**
  * Validate CPF — 11-digit Brazilian individual taxpayer ID.
  *
  * Uses the standard Módulo 11 algorithm with decreasing weights 10..2 / 11..2.
@@ -169,23 +119,25 @@ function libresign_validate_cnpj( string $cnpj ): bool {
 }
 
 /**
- * Server-side format validation for the CPF/CNPJ checkout field.
+ * Server-side enforcement via the address-location validation hook.
  *
- * Fires for every additional checkout field submitted via the WooCommerce
- * Blocks Store API. Adding an error code causes WooCommerce to reject the
- * order with HTTP 400 and surface the message in the checkout UI.
- *
- * Note: the empty-field check is already handled by the required flag set in
- * the woocommerce_get_contextual_fields_for_location filter in billing.php;
- * this hook only validates format when a value is present.
+ * This is the WooCommerce Blocks hook that receives the whole address group
+ * (including the country), so the field can be required and format-validated
+ * only for Brazilian billing addresses without blocking other countries.
  */
-add_action( 'woocommerce_blocks_validate_additional_checkout_field', function ( \WP_Error $errors, string $field_key, $field_value ) {
-	if ( 'libresign/cpf-cnpj' !== $field_key ) {
+add_action( 'woocommerce_blocks_validate_location_address_fields', function ( \WP_Error $errors, $fields, $group ) {
+	if ( 'billing' !== $group ) {
 		return;
 	}
 
-	$value = trim( (string) $field_value );
+	$country = ( is_array( $fields ) && isset( $fields['country'] ) ) ? (string) $fields['country'] : '';
+	if ( 'BR' !== $country ) {
+		return;
+	}
+
+	$value = isset( $fields['libresign/cpf-cnpj'] ) ? trim( (string) $fields['libresign/cpf-cnpj'] ) : '';
 	if ( '' === $value ) {
+		$errors->add( 'libresign_cpf_cnpj_required', __( 'Please enter your CPF or CNPJ.', 'libresign' ) );
 		return;
 	}
 
@@ -204,6 +156,32 @@ add_action( 'woocommerce_blocks_validate_additional_checkout_field', function ( 
 		$errors->add( 'invalid_cpf_cnpj', __( 'Please enter a valid CPF (11 digits) or CNPJ (14 characters).', 'libresign' ) );
 	}
 }, 10, 3 );
+
+/**
+ * CPF/CNPJ is a Brazilian billing concept: never keep it on a shipping address,
+ * and drop it entirely when the billing country is not Brazil. Runs on the
+ * Store API update hooks, which fire after the value is set on the object but
+ * before it is saved.
+ */
+function libresign_strip_irrelevant_cpf_cnpj( $wc_object ) {
+	if ( ! is_object( $wc_object ) || ! method_exists( $wc_object, 'delete_meta_data' ) ) {
+		return;
+	}
+
+	$wc_object->delete_meta_data( '_wc_shipping/libresign/cpf-cnpj' );
+
+	if ( method_exists( $wc_object, 'get_billing_country' ) && 'BR' !== $wc_object->get_billing_country() ) {
+		$wc_object->delete_meta_data( '_wc_billing/libresign/cpf-cnpj' );
+	}
+}
+
+add_action( 'woocommerce_store_api_checkout_update_order_from_request', function ( $order ) {
+	libresign_strip_irrelevant_cpf_cnpj( $order );
+}, 100, 1 );
+
+add_action( 'woocommerce_store_api_checkout_update_customer_from_request', function ( $customer ) {
+	libresign_strip_irrelevant_cpf_cnpj( $customer );
+}, 100, 1 );
 
 /**
  * Client-side script for the CPF/CNPJ checkout field.
