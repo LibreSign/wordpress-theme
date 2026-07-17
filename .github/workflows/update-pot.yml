@@ -1,0 +1,47 @@
+name: Update translation template
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - 'woocommerce/**/*.php'
+
+permissions:
+  contents: write
+
+jobs:
+  update-pot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: wp-cli
+
+      - name: Generate .pot file
+        run: |
+          wp i18n make-pot . languages/libresign.pot \
+            --domain=libresign \
+            --exclude=vendor,node_modules \
+            --allow-root
+
+      - name: Commit updated .pot if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "i18n: update translation template [skip ci]"
+          file_pattern: "languages/libresign.pot"
+
+      - name: Notify Weblate to pull latest changes
+        if: env.WEBLATE_API_TOKEN != ''
+        env:
+          WEBLATE_API_TOKEN: ${{ secrets.WEBLATE_API_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Token ${WEBLATE_API_TOKEN}" \
+            "https://hosted.weblate.org/api/components/libresign-coop-site/wordpress-theme/repository/" \
+            -d "operation=pull"

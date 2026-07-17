@@ -1,0 +1,40 @@
+name: Compile translation binaries
+
+# Triggered when Weblate pushes updated .po files back to main.
+# Compiles each .po file into a .mo binary that WordPress loads at runtime.
+# The .mo files are NOT versioned (see .gitignore); they are committed here
+# so the theme works immediately after install without a build step.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'languages/**.po'
+
+permissions:
+  contents: write
+
+jobs:
+  compile-mo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: wp-cli
+
+      - name: Compile all .po → .mo
+        run: |
+          for po in languages/*.po; do
+            wp i18n make-mo "$po" --allow-root
+          done
+
+      - name: Commit compiled .mo files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "i18n: compile .mo files [skip ci]"
+          file_pattern: "languages/*.mo"
