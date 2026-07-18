@@ -77,35 +77,15 @@ $lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_
 
 	<div class="u-column2 col-2">
 
-		<h2><?php esc_html_e( 'Register', 'woocommerce' ); ?></h2>
+		<h2><?php esc_html_e( 'Create your workspace', 'libresign' ); ?></h2>
 
-		<form method="post" class="woocommerce-form woocommerce-form-register register" <?php do_action( 'woocommerce_register_form_tag' ); ?>>
+		<form method="post" class="woocommerce-form woocommerce-form-register register">
 
-			<?php do_action( 'woocommerce_register_form_start' ); ?>
-
-			<?php // Username is auto-generated from e-mail; hidden field keeps WooCommerce happy. ?>
-			<input type="hidden" name="username" id="reg_username" value="" />
-
-			<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-				<label for="reg_full_name">
-					<?php esc_html_e( 'Full name', 'libresign' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
-				</label>
-				<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="full_name" id="reg_full_name" autocomplete="name" value="<?php echo ( ! empty( $_POST['full_name'] ) ) ? esc_attr( wp_unslash( $_POST['full_name'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized ?>
+			<p class="libresign-workspace-intro">
+				<?php esc_html_e( 'Choose a plan to get started. You will set your email and password when you finish checkout.', 'libresign' ); ?>
 			</p>
 
-			<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-				<label for="reg_email">
-					<?php esc_html_e( 'Email address', 'woocommerce' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
-				</label>
-				<input type="email" class="woocommerce-Input woocommerce-Input--text input-text" name="email" id="reg_email" autocomplete="email" value="<?php echo ( ! empty( $_POST['email'] ) ) ? esc_attr( wp_unslash( $_POST['email'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized ?>
-			</p>
-
-			<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-				<label for="reg_password">
-					<?php esc_html_e( 'Password', 'woocommerce' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
-				</label>
-				<input type="password" class="woocommerce-Input woocommerce-Input--text input-text" name="password" id="reg_password" autocomplete="new-password" required aria-required="true" />
-			</p>
+			<?php if ( function_exists( 'libresign_render_plan_selector' ) ) { libresign_render_plan_selector(); } ?>
 
 			<p class="form-row form-row-wide validate-required">
 				<label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
@@ -129,16 +109,11 @@ $lost_password_url = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_
 				</label>
 			</p>
 
-			<?php wp_nonce_field( 'woocommerce-register', 'woocommerce-register-nonce' ); ?>
-			<?php if ( $redirect_to ) : ?>
-				<input type="hidden" name="redirect" value="<?php echo esc_url( $redirect_to ); ?>" />
-			<?php endif; ?>
+			<?php wp_nonce_field( 'libresign_create_workspace', 'libresign_workspace_nonce' ); ?>
 
 			<p class="woocommerce-form-row form-row">
-				<button type="submit" class="woocommerce-Button woocommerce-button button<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?> woocommerce-form-register__submit" name="register" value="<?php esc_attr_e( 'Register', 'woocommerce' ); ?>"><?php esc_html_e( 'Register', 'woocommerce' ); ?></button>
+				<button type="submit" class="woocommerce-Button woocommerce-button button<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?> woocommerce-form-register__submit" name="libresign_create_workspace" value="1"><?php esc_html_e( 'Continue to checkout', 'libresign' ); ?></button>
 			</p>
-
-			<?php do_action( 'woocommerce_register_form_end' ); ?>
 
 		</form>
 
