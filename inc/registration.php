@@ -45,13 +45,19 @@ function libresign_handle_create_workspace_submission() {
 		return;
 	}
 
-	$plans   = libresign_get_available_plans();
+	$plans = libresign_get_available_plans();
+
+	$offered_ids = array();
+	foreach ( $plans as $offered_plan ) {
+		$offered_ids[] = $offered_plan->get_id();
+	}
+
 	$plan_id = isset( $_POST['libresign_plan'] ) ? absint( wp_unslash( $_POST['libresign_plan'] ) ) : 0;
 	$plan    = $plan_id ? wc_get_product( $plan_id ) : null;
 	$term    = isset( $_POST['libresign_plan_term'] ) ? sanitize_key( wp_unslash( $_POST['libresign_plan_term'] ) ) : '';
 
 	$has_plans     = ! empty( $plans );
-	$is_valid_plan = libresign_is_plan_product( $plan ) && $plan->is_purchasable();
+	$is_valid_plan = $plan instanceof WC_Product && in_array( $plan_id, $offered_ids, true );
 	$variation_id  = 0;
 
 	if ( $has_plans && ! $is_valid_plan ) {
@@ -68,7 +74,7 @@ function libresign_handle_create_workspace_submission() {
 	}
 
 	if ( wc_notice_count( 'error' ) > 0 ) {
-		return; // Re-render the form with the validation notices.
+		return;
 	}
 
 	$added = false;
@@ -86,7 +92,6 @@ function libresign_handle_create_workspace_submission() {
 		$added = (bool) WC()->cart->add_to_cart( $plan_id );
 	}
 
-	// Never forward to an empty checkout (no plans configured, or add_to_cart failed).
 	if ( ! $added ) {
 		if ( 0 === wc_notice_count( 'error' ) ) {
 			wc_add_notice( __( 'You must choose a subscription plan before continuing.', 'libresign' ), 'error' );
@@ -94,8 +99,6 @@ function libresign_handle_create_workspace_submission() {
 		return;
 	}
 
-	// Remember the consent so it can be persisted once the account is created at
-	// checkout.
 	WC()->session->set( 'libresign_workspace_terms', 'yes' );
 
 	wp_safe_redirect( wc_get_checkout_url() );
