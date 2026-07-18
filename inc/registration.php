@@ -10,10 +10,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// ---------------------------------------------------------------------------
-// Policy URL helper (shared with checkout)
-// ---------------------------------------------------------------------------
-
 /**
  * Return the site policy / privacy page URL.
  */
@@ -27,10 +23,6 @@ function libresign_get_policy_url() {
 
 	return home_url( '/privacy-police/' );
 }
-
-// ---------------------------------------------------------------------------
-// Workspace creation form: add plan to cart and forward to checkout
-// ---------------------------------------------------------------------------
 
 /**
  * Handle the "create workspace" form submission.
@@ -79,17 +71,27 @@ function libresign_handle_create_workspace_submission() {
 		return; // Re-render the form with the validation notices.
 	}
 
-	WC()->cart->empty_cart();
+	$added = false;
 
 	if ( $variation_id ) {
-		WC()->cart->add_to_cart(
+		WC()->cart->empty_cart();
+		$added = (bool) WC()->cart->add_to_cart(
 			$plan_id,
 			1,
 			$variation_id,
 			array( 'attribute_' . LIBRESIGN_PLAN_TERM_ATTRIBUTE => $term )
 		);
 	} elseif ( $is_valid_plan ) {
-		WC()->cart->add_to_cart( $plan_id );
+		WC()->cart->empty_cart();
+		$added = (bool) WC()->cart->add_to_cart( $plan_id );
+	}
+
+	// Never forward to an empty checkout (no plans configured, or add_to_cart failed).
+	if ( ! $added ) {
+		if ( 0 === wc_notice_count( 'error' ) ) {
+			wc_add_notice( __( 'You must choose a subscription plan before continuing.', 'libresign' ), 'error' );
+		}
+		return;
 	}
 
 	// Remember the consent so it can be persisted once the account is created at
@@ -122,10 +124,6 @@ function libresign_persist_workspace_consent_from_session( $customer_id ) {
 	WC()->session->__unset( 'libresign_workspace_terms' );
 }
 add_action( 'woocommerce_created_customer', 'libresign_persist_workspace_consent_from_session', 10, 1 );
-
-// ---------------------------------------------------------------------------
-// Login redirect
-// ---------------------------------------------------------------------------
 
 /**
  * Send authenticated users to the account dashboard after login.

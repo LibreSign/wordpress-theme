@@ -169,6 +169,7 @@ function libresign_render_plan_selector() {
 		<?php endforeach; ?>
 	</fieldset>
 
+	<?php // Radio values must match the "Term length" variation slugs exactly, case-sensitive ('monthly' / 'yearly'). ?>
 	<fieldset class="libresign-plan-term form-row form-row-wide">
 		<legend class="libresign-plan-term__legend"><?php esc_html_e( 'Billing period', 'libresign' ); ?></legend>
 
