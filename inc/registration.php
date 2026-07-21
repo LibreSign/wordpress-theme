@@ -1,9 +1,8 @@
 <?php
 /**
- * Workspace creation: the plan-selection form only fills the cart and forwards
- * to checkout. The customer account is created by WooCommerce at checkout (with
- * Subscriptions requiring an account for subscription carts), so an abandoned
- * checkout never leaves an account behind.
+ * Workspace creation: an account only exists as part of a purchase, so
+ * registration is offered only while the cart holds a plan and leads to
+ * checkout.
  *
  * @package libresign
  */
@@ -25,113 +24,64 @@ function libresign_get_policy_url() {
 }
 
 /**
- * Handle the "create workspace" form submission.
- *
- * The account is intentionally NOT created here: the form only validates the
- * plan choice, adds the chosen plan to the cart and forwards the visitor to
- * checkout, where WooCommerce creates the account when the order is placed.
+ * Whether a purchase is in progress, which decides what the account page offers
+ * and where authentication leads.
  */
-function libresign_handle_create_workspace_submission() {
-	if ( empty( $_POST['libresign_create_workspace'] ) ) {
-		return;
+function libresign_cart_has_items() {
+	if ( ! function_exists( 'WC' ) ) {
+		return false;
 	}
 
-	if ( ! isset( $_POST['libresign_workspace_nonce'] )
-		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['libresign_workspace_nonce'] ) ), 'libresign_create_workspace' ) ) {
-		return;
-	}
+	$wc = WC();
 
-	if ( is_null( WC()->cart ) || is_null( WC()->session ) ) {
-		return;
-	}
-
-	$plans = libresign_get_available_plans();
-
-	$offered_ids = array();
-	foreach ( $plans as $offered_plan ) {
-		$offered_ids[] = $offered_plan->get_id();
-	}
-
-	$plan_id = isset( $_POST['libresign_plan'] ) ? absint( wp_unslash( $_POST['libresign_plan'] ) ) : 0;
-	$plan    = $plan_id ? wc_get_product( $plan_id ) : null;
-	$term    = isset( $_POST['libresign_plan_term'] ) ? sanitize_key( wp_unslash( $_POST['libresign_plan_term'] ) ) : '';
-
-	$has_plans     = ! empty( $plans );
-	$is_valid_plan = $plan instanceof WC_Product && in_array( $plan_id, $offered_ids, true );
-	$variation_id  = 0;
-
-	if ( $has_plans && ! $is_valid_plan ) {
-		wc_add_notice( __( 'You must choose a subscription plan before continuing.', 'libresign' ), 'error' );
-	} elseif ( $is_valid_plan && 'variable-subscription' === $plan->get_type() ) {
-		$variation_id = libresign_resolve_plan_variation_id( $plan, $term );
-		if ( ! $variation_id ) {
-			wc_add_notice( __( 'Please choose a billing period for the selected plan.', 'libresign' ), 'error' );
-		}
-	}
-
-	if ( empty( $_POST['libresign_workspace_terms'] ) ) {
-		wc_add_notice( __( 'You must accept the terms to create your workspace.', 'libresign' ), 'error' );
-	}
-
-	if ( wc_notice_count( 'error' ) > 0 ) {
-		return;
-	}
-
-	$added = false;
-
-	if ( $variation_id ) {
-		WC()->cart->empty_cart();
-		$added = (bool) WC()->cart->add_to_cart(
-			$plan_id,
-			1,
-			$variation_id,
-			array( 'attribute_' . LIBRESIGN_PLAN_TERM_ATTRIBUTE => $term )
-		);
-	} elseif ( $is_valid_plan ) {
-		WC()->cart->empty_cart();
-		$added = (bool) WC()->cart->add_to_cart( $plan_id );
-	}
-
-	if ( ! $added ) {
-		if ( 0 === wc_notice_count( 'error' ) ) {
-			wc_add_notice( __( 'You must choose a subscription plan before continuing.', 'libresign' ), 'error' );
-		}
-		return;
-	}
-
-	WC()->session->set( 'libresign_workspace_terms', 'yes' );
-
-	wp_safe_redirect( wc_get_checkout_url() );
-	exit;
+	return isset( $wc->cart ) && $wc->cart && ! $wc->cart->is_empty();
 }
-add_action( 'template_redirect', 'libresign_handle_create_workspace_submission' );
 
 /**
- * Persist the workspace terms consent captured on the plan form once the account
- * is created at checkout.
+ * Require the terms consent on the workspace registration form.
  *
- * @param int $customer_id New customer ID.
+ * Hooked on 'woocommerce_process_registration_errors' rather than
+ * 'woocommerce_registration_errors': the latter runs inside
+ * wc_create_new_customer(), which checkout also uses, and would reject every
+ * account created there since the consent field only exists on this form.
  */
-function libresign_persist_workspace_consent_from_session( $customer_id ) {
-	if ( is_null( WC()->session ) ) {
-		return;
+function libresign_validate_workspace_terms( $errors ) {
+	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$errors->add(
+			'libresign_workspace_terms',
+			__( 'You must accept the terms to create your workspace.', 'libresign' )
+		);
 	}
 
-	if ( 'yes' !== WC()->session->get( 'libresign_workspace_terms' ) ) {
+	return $errors;
+}
+add_filter( 'woocommerce_process_registration_errors', 'libresign_validate_workspace_terms', 10, 1 );
+
+/**
+ * Persist the terms consent so the approval is auditable.
+ */
+function libresign_persist_workspace_consent( $customer_id ) {
+	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return;
 	}
 
 	update_user_meta( $customer_id, 'libresign_workspace_terms', 'yes' );
 	update_user_meta( $customer_id, 'libresign_workspace_terms_date', current_time( 'mysql' ) );
-
-	WC()->session->__unset( 'libresign_workspace_terms' );
 }
-add_action( 'woocommerce_created_customer', 'libresign_persist_workspace_consent_from_session', 10, 1 );
+add_action( 'woocommerce_created_customer', 'libresign_persist_workspace_consent', 10, 1 );
 
 /**
- * Send authenticated users to the account dashboard after login.
+ * Send users to their destination after logging in.
  */
-function libresign_login_redirect_to_account( $redirect, $user ) {
+function libresign_login_redirect( $redirect, $user ) {
 	return libresign_get_purchase_redirect_target();
 }
-add_filter( 'woocommerce_login_redirect', 'libresign_login_redirect_to_account', 10, 2 );
+add_filter( 'woocommerce_login_redirect', 'libresign_login_redirect', 10, 2 );
+
+/**
+ * Send users to their destination after registering.
+ */
+function libresign_registration_redirect( $redirect ) {
+	return libresign_get_purchase_redirect_target();
+}
+add_filter( 'woocommerce_registration_redirect', 'libresign_registration_redirect', 10, 1 );

@@ -27,8 +27,9 @@ function libresign_get_account_url() {
 }
 
 /**
- * Preserve the intended destination after authentication when coming from a
- * product or purchase page.
+ * Preserve the intended destination after authentication: an explicit
+ * `redirect_to`, then checkout while a purchase is in progress, then the
+ * account dashboard.
  */
 function libresign_get_purchase_redirect_target() {
 	$redirect_to = '';
@@ -41,6 +42,10 @@ function libresign_get_purchase_redirect_target() {
 
 	if ( '' !== $redirect_to ) {
 		return $redirect_to;
+	}
+
+	if ( function_exists( 'libresign_cart_has_items' ) && libresign_cart_has_items() && function_exists( 'wc_get_checkout_url' ) ) {
+		return wc_get_checkout_url();
 	}
 
 	return libresign_get_account_url();
