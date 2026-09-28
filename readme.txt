@@ -49,6 +49,15 @@ Recommended repository webhook configuration on `LibreSign/site`:
 
 - `bash tests/github-site-webhook-smoke.sh`
 
+== Development ==
+
+Every check is a Composer script:
+
+- `composer lint`: php -l on every file
+- `composer cs`: PHPCS
+- `composer stan`: PHPStan
+- `composer ci`: all of the above, in this order
+
 == Development notes ==
 
 - Site fragment sync/render bootstrap: `inc/footer-fragment.php`

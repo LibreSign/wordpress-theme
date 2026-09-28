@@ -1,2 +1,4 @@
 # Compiled translation binaries — generated from .po files by the workflow
 languages/*.mo
+/vendor/
+/vendor-bin/*/vendor/
