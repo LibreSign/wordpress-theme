@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * URL of the plans listing, falling back to the WooCommerce shop.
  */
-function libresign_get_plans_url() {
+function libresign_theme_get_plans_url() {
 	$page = get_page_by_path( 'plans' );
 	if ( $page instanceof WP_Post && 'publish' === $page->post_status ) {
 		return (string) get_permalink( $page );

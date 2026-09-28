@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Resolve the canonical WooCommerce My Account URL.
  */
-function libresign_get_account_url() {
+function libresign_theme_get_account_url() {
 	if ( function_exists( 'wc_get_page_permalink' ) ) {
 		$account_url = wc_get_page_permalink( 'myaccount' );
 		if ( ! empty( $account_url ) ) {
@@ -31,11 +31,11 @@ function libresign_get_account_url() {
  * `redirect_to`, then checkout while a purchase is in progress, then the
  * account dashboard.
  */
-function libresign_get_purchase_redirect_target() {
+function libresign_theme_get_purchase_redirect_target() {
 	$redirect_to = '';
 
 	if ( isset( $_REQUEST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$redirect_to = wp_unslash( $_REQUEST['redirect_to'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$redirect_to = wp_sanitize_redirect( wp_unslash( $_REQUEST['redirect_to'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
 	$redirect_to = wp_validate_redirect( $redirect_to, '' );
@@ -44,11 +44,11 @@ function libresign_get_purchase_redirect_target() {
 		return $redirect_to;
 	}
 
-	if ( function_exists( 'libresign_cart_has_items' ) && libresign_cart_has_items() && function_exists( 'wc_get_checkout_url' ) ) {
+	if ( function_exists( 'libresign_theme_cart_has_items' ) && libresign_theme_cart_has_items() && function_exists( 'wc_get_checkout_url' ) ) {
 		return wc_get_checkout_url();
 	}
 
-	return libresign_get_account_url();
+	return libresign_theme_get_account_url();
 }
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ function libresign_get_purchase_redirect_target() {
 /**
  * Detect if the current request targets the WooCommerce lost-password endpoint.
  */
-function libresign_is_lost_password_request() {
+function libresign_theme_is_lost_password_request() {
 	if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'lost-password' ) ) {
 		return true;
 	}
@@ -73,8 +73,8 @@ function libresign_is_lost_password_request() {
 /**
  * Detect the direct /lost-password/ route used outside the WooCommerce account page.
  */
-function libresign_is_direct_lost_password_route() {
-	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+function libresign_theme_is_direct_lost_password_route() {
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 	$path        = wp_parse_url( $request_uri, PHP_URL_PATH );
 
 	return '/lost-password/' === $path || '/lost-password' === $path;
@@ -84,7 +84,7 @@ function libresign_is_direct_lost_password_route() {
  * Detect a WooCommerce password-reset confirmation request (reset link,
  * set-new-password or link-sent step).
  */
-function libresign_is_password_reset_confirmation() {
+function libresign_theme_is_password_reset_confirmation() {
 	if ( isset( $_GET['key'] ) && ( isset( $_GET['id'] ) || isset( $_GET['login'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return true;
 	}
@@ -99,8 +99,8 @@ function libresign_is_password_reset_confirmation() {
 /**
  * Render the lost-password form.
  */
-function libresign_render_lost_password_form() {
-	$account_url  = libresign_get_account_url();
+function libresign_theme_render_lost_password_form() {
+	$account_url  = libresign_theme_get_account_url();
 	$button_class = function_exists( 'wc_wp_theme_get_element_class_name' ) && wc_wp_theme_get_element_class_name( 'button' )
 		? ' ' . wc_wp_theme_get_element_class_name( 'button' )
 		: '';
@@ -150,7 +150,7 @@ function libresign_render_lost_password_form() {
  *   and the standard dashboard for logged-in users).
  * - Shop / checkout → prepend the SaaS onboarding block pattern.
  */
-function libresign_prepend_saas_onboarding_to_content( $content ) {
+function libresign_theme_prepend_saas_onboarding_to_content( $content ) {
 	if ( is_admin() || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
@@ -162,13 +162,13 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 		remove_filter( 'the_content', 'shortcode_unautop' );
 	}
 
-	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_is_lost_password_request() ) {
-		if ( libresign_is_password_reset_confirmation() ) {
+	if ( function_exists( 'is_account_page' ) && is_account_page() && libresign_theme_is_lost_password_request() ) {
+		if ( libresign_theme_is_password_reset_confirmation() ) {
 			return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
 		}
 
 		ob_start();
-		libresign_render_lost_password_form();
+		libresign_theme_render_lost_password_form();
 		return ob_get_clean();
 	}
 
@@ -194,7 +194,7 @@ function libresign_prepend_saas_onboarding_to_content( $content ) {
 
 	return $content;
 }
-add_filter( 'the_content', 'libresign_prepend_saas_onboarding_to_content', 5 );
+add_filter( 'the_content', 'libresign_theme_prepend_saas_onboarding_to_content', 5 );
 
 // ---------------------------------------------------------------------------
 // Direct /lost-password/ route handler
@@ -204,14 +204,14 @@ add_filter( 'the_content', 'libresign_prepend_saas_onboarding_to_content', 5 );
  * Render the lost-password page when the route is visited outside the
  * WooCommerce account page (e.g. /lost-password/ directly).
  */
-function libresign_render_direct_lost_password_route() {
-	if ( is_admin() || wp_doing_ajax() || ! libresign_is_direct_lost_password_route() ) {
+function libresign_theme_render_direct_lost_password_route() {
+	if ( is_admin() || wp_doing_ajax() || ! libresign_theme_is_direct_lost_password_route() ) {
 		return;
 	}
 
 	// Let WooCommerce's redirect_reset_password_link() (priority 10) handle
 	// confirmation links.
-	if ( libresign_is_password_reset_confirmation() ) {
+	if ( libresign_theme_is_password_reset_confirmation() ) {
 		return;
 	}
 
@@ -239,7 +239,7 @@ function libresign_render_direct_lost_password_route() {
 			<main class="wp-block-group">
 				<div class="wp-block-group is-layout-constrained">
 					<h1 class="wp-block-post-title has-text-align-center"><?php esc_html_e( 'Lost password', 'libresign' ); ?></h1>
-					<?php libresign_render_lost_password_form(); ?>
+					<?php libresign_theme_render_lost_password_form(); ?>
 				</div>
 			</main>
 			<?php echo $footer; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -250,4 +250,4 @@ function libresign_render_direct_lost_password_route() {
 	<?php
 	exit;
 }
-add_action( 'template_redirect', 'libresign_render_direct_lost_password_route', 1 );
+add_action( 'template_redirect', 'libresign_theme_render_direct_lost_password_route', 1 );

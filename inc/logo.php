@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
  * @param string $variant 'light' for light backgrounds (default), 'dark' for dark.
  * @return string
  */
-function libresign_get_theme_logo_url( string $variant = 'light' ): string {
+function libresign_theme_get_theme_logo_url( string $variant = 'light' ): string {
 	$base = 'https://github.com/LibreSign/site/raw/refs/heads/main/source/assets/images/logo/';
 	return 'dark' === $variant
 		? $base . 'logo-2.svg'   // pale logo — legible on dark backgrounds
@@ -40,7 +40,7 @@ function libresign_get_theme_logo_url( string $variant = 'light' ): string {
  * the browser may select any of the srcset candidates based on viewport and
  * device pixel ratio.
  */
-function libresign_custom_logo_needs_fallback( $custom_logo_html ) {
+function libresign_theme_custom_logo_needs_fallback( $custom_logo_html ) {
 	if ( '' === trim( (string) $custom_logo_html ) ) {
 		return true;
 	}
@@ -112,13 +112,13 @@ function libresign_custom_logo_needs_fallback( $custom_logo_html ) {
  *  3. Wraps the <img> in a <picture> element so the browser picks the correct
  *     variant from the system color-scheme preference without JavaScript.
  */
-function libresign_filter_custom_logo( $custom_logo_html, $blog_id ) {
-	if ( ! libresign_custom_logo_needs_fallback( $custom_logo_html ) ) {
+function libresign_theme_filter_custom_logo( $custom_logo_html, $blog_id ) {
+	if ( ! libresign_theme_custom_logo_needs_fallback( $custom_logo_html ) ) {
 		return $custom_logo_html;
 	}
 
-	$logo_light = esc_url( libresign_get_theme_logo_url( 'light' ) );
-	$logo_dark  = esc_url( libresign_get_theme_logo_url( 'dark' ) );
+	$logo_light = esc_url( libresign_theme_get_theme_logo_url( 'light' ) );
+	$logo_dark  = esc_url( libresign_theme_get_theme_logo_url( 'dark' ) );
 
 	// Remove srcset/sizes and set src to the light-background logo.
 	$patched = preg_replace( '/\ssrcset=["\'][^"\']*["\']/', '', $custom_logo_html );
@@ -142,4 +142,4 @@ function libresign_filter_custom_logo( $custom_logo_html, $blog_id ) {
 
 	return $patched ?: $custom_logo_html;
 }
-add_filter( 'get_custom_logo', 'libresign_filter_custom_logo', 10, 2 );
+add_filter( 'get_custom_logo', 'libresign_theme_filter_custom_logo', 10, 2 );

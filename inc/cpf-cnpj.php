@@ -43,7 +43,7 @@ add_action( 'woocommerce_init', function () {
  * @param string $cpf Raw or formatted CPF (dots and dash are stripped).
  * @return bool
  */
-function libresign_validate_cpf( string $cpf ): bool {
+function libresign_theme_validate_cpf( string $cpf ): bool {
 	$cpf = preg_replace( '/[^0-9]/', '', $cpf );
 	if ( strlen( $cpf ) !== 11 ) {
 		return false;
@@ -86,7 +86,7 @@ function libresign_validate_cpf( string $cpf ): bool {
  * @param string $cnpj Raw or formatted CNPJ (dots, slash, dash are stripped).
  * @return bool
  */
-function libresign_validate_cnpj( string $cnpj ): bool {
+function libresign_theme_validate_cnpj( string $cnpj ): bool {
 	$cnpj = strtoupper( preg_replace( '/[\.\-\/]/', '', $cnpj ) );
 	if ( strlen( $cnpj ) !== 14 ) {
 		return false;
@@ -145,11 +145,11 @@ add_action( 'woocommerce_blocks_validate_location_address_fields', function ( \W
 	$stripped    = strtoupper( preg_replace( '/[\.\-\/]/', '', $value ) );
 
 	if ( 14 === strlen( $stripped ) ) {
-		if ( ! libresign_validate_cnpj( $value ) ) {
+		if ( ! libresign_theme_validate_cnpj( $value ) ) {
 			$errors->add( 'invalid_cnpj', __( 'Please enter a valid CNPJ.', 'libresign' ) );
 		}
 	} elseif ( 11 === strlen( $digits_only ) ) {
-		if ( ! libresign_validate_cpf( $value ) ) {
+		if ( ! libresign_theme_validate_cpf( $value ) ) {
 			$errors->add( 'invalid_cpf', __( 'Please enter a valid CPF.', 'libresign' ) );
 		}
 	} else {
@@ -163,7 +163,7 @@ add_action( 'woocommerce_blocks_validate_location_address_fields', function ( \W
  * Store API update hooks, which fire after the value is set on the object but
  * before it is saved.
  */
-function libresign_strip_irrelevant_cpf_cnpj( $wc_object ) {
+function libresign_theme_strip_irrelevant_cpf_cnpj( $wc_object ) {
 	if ( ! is_object( $wc_object ) || ! method_exists( $wc_object, 'delete_meta_data' ) ) {
 		return;
 	}
@@ -176,11 +176,11 @@ function libresign_strip_irrelevant_cpf_cnpj( $wc_object ) {
 }
 
 add_action( 'woocommerce_store_api_checkout_update_order_from_request', function ( $order ) {
-	libresign_strip_irrelevant_cpf_cnpj( $order );
+	libresign_theme_strip_irrelevant_cpf_cnpj( $order );
 }, 100, 1 );
 
 add_action( 'woocommerce_store_api_checkout_update_customer_from_request', function ( $customer ) {
-	libresign_strip_irrelevant_cpf_cnpj( $customer );
+	libresign_theme_strip_irrelevant_cpf_cnpj( $customer );
 }, 100, 1 );
 
 /**
