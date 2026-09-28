@@ -13,10 +13,9 @@ defined( 'ABSPATH' ) || exit;
  * Return the site policy / privacy page URL.
  */
 function libresign_theme_get_policy_url() {
-	$policy_page_id = 3;
-	$policy_url     = get_permalink( $policy_page_id );
+	$policy_url = get_privacy_policy_url();
 
-	if ( ! empty( $policy_url ) ) {
+	if ( '' !== $policy_url ) {
 		return $policy_url;
 	}
 
