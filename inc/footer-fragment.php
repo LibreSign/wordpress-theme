@@ -53,7 +53,7 @@ function libresign_theme_site_fragment_normalize_locale_tag( $locale ) {
 		return '';
 	}
 
-	$parts = array_values( array_filter( explode( '-', $locale ), 'strlen' ) );
+	$parts = array_values( array_filter( explode( '-', $locale ), static fn ( $part ) => '' !== $part ) );
 	if ( empty( $parts ) ) {
 		return '';
 	}
@@ -193,10 +193,6 @@ function libresign_theme_site_fragment_fetch_url( $url ) {
  * @return bool
  */
 function libresign_theme_site_fragment_is_optional_http_error( $error ) {
-	if ( ! is_wp_error( $error ) ) {
-		return false;
-	}
-
 	$data = $error->get_error_data();
 
 	return is_array( $data ) && isset( $data['status'] ) && 404 === (int) $data['status'];
@@ -309,7 +305,7 @@ function libresign_theme_site_fragment_rewrite_root_relative_urls( $content, $si
 	$content = preg_replace_callback(
 		'~url\(\s*(?:("|\')\s*)?(\/(?!\/)[^)"\']+)(?:\s*\1)?\s*\)~i',
 		static function ( $matches ) use ( $site_origin ) {
-			$quote = isset( $matches[1] ) ? (string) $matches[1] : '';
+			$quote = $matches[1];
 
 			return 'url(' . $quote . $site_origin . $matches[2] . $quote . ')';
 		},
@@ -550,10 +546,7 @@ function libresign_theme_site_fragment_locale_lookup_keys() {
 		}
 
 		$keys[] = $normalized;
-		$language_only = strtok( $normalized, '-' );
-		if ( is_string( $language_only ) && '' !== $language_only ) {
-			$keys[] = strtolower( $language_only );
-		}
+		$keys[] = strtolower( strtok( $normalized, '-' ) );
 	}
 
 	$keys[] = LIBRESIGN_THEME_SITE_FRAGMENT_DEFAULT_LOCALE_KEY;

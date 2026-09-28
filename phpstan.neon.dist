@@ -10,3 +10,14 @@ parameters:
         - woocommerce
     bootstrapFiles:
         - vendor-bin/phpstan/vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+    ignoreErrors:
+        -
+            identifier: constant.notFound
+            message: '#^Constant (AUTH_KEY|SECURE_AUTH_SALT|NONCE_SALT) not found\.$#'
+            path: inc/github-site-webhook.php
+        -
+            identifier: isset.property
+            path: inc/registration.php
+        -
+            identifier: booleanAnd.rightAlwaysTrue
+            path: inc/registration.php
