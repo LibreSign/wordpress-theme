@@ -1,6 +1,6 @@
 <?php
 /**
- * Checkout policy terms: customize the terms checkbox and validate consent.
+ * Checkout policy terms: require the consent and link the policy.
  *
  * @package libresign
  */
@@ -8,32 +8,45 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Customize the checkout terms checkbox text to point at the policy page.
+ * Require the policy consent on the checkout.
  */
-function libresign_theme_checkout_policy_checkbox_text( $text ) {
-	$policy_url = libresign_theme_get_policy_url();
+function libresign_theme_register_policy_consent_field() {
+	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
+		return;
+	}
 
-	return sprintf(
-		/* translators: %s: policy page link */
-		__( 'I agree to the %s before placing the order.', 'libresign' ),
-		sprintf(
-			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
-			esc_url( $policy_url ),
-			esc_html__( 'terms and privacy policy', 'libresign' )
+	woocommerce_register_additional_checkout_field(
+		array(
+			'id'            => 'libresign/policy-consent',
+			'label'         => __( 'I agree to the terms and privacy policy before placing the order.', 'libresign' ),
+			'location'      => 'order',
+			'type'          => 'checkbox',
+			'required'      => true,
+			'error_message' => __( 'You must agree to the policies before completing the purchase.', 'libresign' ),
 		)
 	);
 }
-add_filter( 'woocommerce_get_terms_and_conditions_checkbox_text', 'libresign_theme_checkout_policy_checkbox_text' );
+add_action( 'woocommerce_init', 'libresign_theme_register_policy_consent_field' );
 
 /**
- * Prevent checkout submission without policy terms acceptance.
+ * Link the checkout terms text to the policy.
  */
-function libresign_theme_validate_checkout_policy_consent( $data, $errors ) {
-	if ( empty( $data['terms'] ) ) {
-		$errors->add(
-			'libresign_policy_consent',
-			__( 'You must agree to the policies before completing the purchase.', 'libresign' )
-		);
-	}
+function libresign_theme_link_checkout_terms_to_policy( $block_content ) {
+	$text = sprintf(
+		/* translators: %s: policy page link */
+		__( 'Read the %s.', 'libresign' ),
+		sprintf(
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+			esc_url( libresign_theme_get_policy_url() ),
+			esc_html__( 'terms and privacy policy', 'libresign' )
+		)
+	);
+
+	return (string) preg_replace(
+		'/<div(?=[^>]*\bwp-block-woocommerce-checkout-terms-block\b)/',
+		'<div data-text="' . esc_attr( $text ) . '"',
+		(string) $block_content,
+		1
+	);
 }
-add_action( 'woocommerce_after_checkout_validation', 'libresign_theme_validate_checkout_policy_consent', 10, 2 );
+add_filter( 'render_block_woocommerce/checkout-terms-block', 'libresign_theme_link_checkout_terms_to_policy' );
