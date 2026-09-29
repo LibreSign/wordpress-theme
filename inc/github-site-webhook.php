@@ -9,6 +9,7 @@ use LibreSign\WordPressTheme\SiteFragment;
 defined( 'ABSPATH' ) || exit;
 
 require_once dirname( __DIR__ ) . '/src/SiteDeploy.php';
+require_once dirname( __DIR__ ) . '/src/SiteFragment.php';
 
 const LIBRESIGN_THEME_GITHUB_SITE_WEBHOOK_NAMESPACE = 'libresign/v1';
 const LIBRESIGN_THEME_GITHUB_SITE_WEBHOOK_ROUTE     = '/site-deploy-webhook';
