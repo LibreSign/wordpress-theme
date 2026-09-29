@@ -29,6 +29,19 @@ function libresign_theme_register_policy_consent_field() {
 add_action( 'woocommerce_init', 'libresign_theme_register_policy_consent_field' );
 
 /**
+ * Refuse an order placed through the classic checkout without the policy consent.
+ */
+function libresign_theme_validate_checkout_policy_consent( $data, $errors ) {
+	if ( empty( $data['terms'] ) ) {
+		$errors->add(
+			'libresign_policy_consent',
+			__( 'You must agree to the policies before completing the purchase.', 'libresign' )
+		);
+	}
+}
+add_action( 'woocommerce_after_checkout_validation', 'libresign_theme_validate_checkout_policy_consent', 10, 2 );
+
+/**
  * Link the checkout terms text to the policy.
  */
 function libresign_theme_link_checkout_terms_to_policy( $block_content ) {
