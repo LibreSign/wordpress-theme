@@ -120,7 +120,7 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 
 	public static function provide_deploy_settings() {
 		yield 'site origin'      => array( 'libresign_site_origin', 'LIBRESIGN_SITE_ORIGIN', 'https://libresign.coop', 'libresign_theme_site_origin' );
-		yield 'workflow name'    => array( 'libresign_site_deploy_workflow_name', 'LIBRESIGN_SITE_DEPLOY_WORKFLOW_NAME', 'Deploy', 'libresign_theme_site_deploy_workflow_name' );
+		yield 'workflow name'    => array( 'libresign_site_deploy_workflow_name', 'LIBRESIGN_SITE_DEPLOY_WORKFLOW_NAME', 'pages build and deployment', 'libresign_theme_site_deploy_workflow_name' );
 		yield 'repository name'  => array( 'libresign_site_deploy_repository_name', 'LIBRESIGN_SITE_DEPLOY_REPOSITORY_NAME', 'LibreSign/site', 'libresign_theme_site_deploy_repository_name' );
 		yield 'branch name'      => array( 'libresign_site_deploy_branch_name', 'LIBRESIGN_SITE_DEPLOY_BRANCH_NAME', 'gh-pages', 'libresign_theme_site_deploy_branch_name' );
 	}
@@ -283,7 +283,7 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 				'status'        => 'ignored',
 				'reason'        => 'not_production_deploy',
 				'repository'    => 'LibreSign/site',
-				'workflow_name' => 'Deploy',
+				'workflow_name' => 'pages build and deployment',
 				'head_branch'   => 'gh-pages',
 				'conclusion'    => 'failure',
 			),
@@ -303,7 +303,7 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 				'status'      => 'synced',
 				'delivery_id' => 'delivery-1',
 				'repository'  => 'LibreSign/site',
-				'workflow'    => 'Deploy',
+				'workflow'    => 'pages build and deployment',
 				'origin'      => $this->site->origin(),
 				'synced'      => array(
 					'header' => array( 'default' ),
@@ -494,7 +494,7 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 				'action'       => 'completed',
 				'repository'   => array( 'full_name' => 'LibreSign/site' ),
 				'workflow_run' => array(
-					'name'        => 'Deploy',
+					'name'        => 'pages build and deployment',
 					'conclusion'  => 'success',
 					'head_branch' => 'gh-pages',
 					'head_sha'    => 'abc123',

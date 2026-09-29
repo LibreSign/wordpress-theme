@@ -226,7 +226,7 @@ function libresign_theme_site_deploy_workflow_name() {
 		}
 	}
 
-	return 'Deploy';
+	return 'pages build and deployment';
 }
 
 /**
