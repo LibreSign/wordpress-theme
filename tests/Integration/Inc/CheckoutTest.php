@@ -4,6 +4,7 @@ namespace LibreSign\WordPressTheme\Tests\Integration\Inc;
 
 use Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields;
 use Automattic\WooCommerce\Blocks\Package;
+use WP_Error;
 use WP_UnitTestCase;
 
 final class CheckoutTest extends WP_UnitTestCase {
@@ -20,6 +21,22 @@ final class CheckoutTest extends WP_UnitTestCase {
 		$this->assertTrue( $field['required'] );
 		$this->assertSame( 'I agree to the terms and privacy policy before placing the order.', $field['label'] );
 		$this->assertSame( 'You must agree to the policies before completing the purchase.', $field['errorMessage'] );
+	}
+
+	public function test_the_classic_checkout_refuses_an_order_without_the_consent() {
+		$errors = new WP_Error();
+
+		do_action( 'woocommerce_after_checkout_validation', array( 'terms' => 0 ), $errors );
+
+		$this->assertContains( 'libresign_policy_consent', $errors->get_error_codes() );
+	}
+
+	public function test_the_classic_checkout_accepts_an_order_with_the_consent() {
+		$errors = new WP_Error();
+
+		do_action( 'woocommerce_after_checkout_validation', array( 'terms' => 1 ), $errors );
+
+		$this->assertNotContains( 'libresign_policy_consent', $errors->get_error_codes() );
 	}
 
 	/**
