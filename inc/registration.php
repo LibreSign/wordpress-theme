@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Return the site policy / privacy page URL.
  */
-function libresign_get_policy_url() {
+function libresign_theme_get_policy_url() {
 	$policy_page_id = 3;
 	$policy_url     = get_permalink( $policy_page_id );
 
@@ -27,7 +27,7 @@ function libresign_get_policy_url() {
  * Whether a purchase is in progress, which decides what the account page offers
  * and where authentication leads.
  */
-function libresign_cart_has_items() {
+function libresign_theme_cart_has_items() {
 	if ( ! function_exists( 'WC' ) ) {
 		return false;
 	}
@@ -45,7 +45,7 @@ function libresign_cart_has_items() {
  * wc_create_new_customer(), which checkout also uses, and would reject every
  * account created there since the consent field only exists on this form.
  */
-function libresign_validate_workspace_terms( $errors ) {
+function libresign_theme_validate_workspace_terms( $errors ) {
 	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$errors->add(
 			'libresign_workspace_terms',
@@ -55,12 +55,12 @@ function libresign_validate_workspace_terms( $errors ) {
 
 	return $errors;
 }
-add_filter( 'woocommerce_process_registration_errors', 'libresign_validate_workspace_terms', 10, 1 );
+add_filter( 'woocommerce_process_registration_errors', 'libresign_theme_validate_workspace_terms', 10, 1 );
 
 /**
  * Persist the terms consent so the approval is auditable.
  */
-function libresign_persist_workspace_consent( $customer_id ) {
+function libresign_theme_persist_workspace_consent( $customer_id ) {
 	if ( empty( $_POST['libresign_workspace_terms'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return;
 	}
@@ -68,20 +68,20 @@ function libresign_persist_workspace_consent( $customer_id ) {
 	update_user_meta( $customer_id, 'libresign_workspace_terms', 'yes' );
 	update_user_meta( $customer_id, 'libresign_workspace_terms_date', current_time( 'mysql' ) );
 }
-add_action( 'woocommerce_created_customer', 'libresign_persist_workspace_consent', 10, 1 );
+add_action( 'woocommerce_created_customer', 'libresign_theme_persist_workspace_consent', 10, 1 );
 
 /**
  * Send users to their destination after logging in.
  */
-function libresign_login_redirect( $redirect, $user ) {
-	return libresign_get_purchase_redirect_target();
+function libresign_theme_login_redirect( $redirect, $user ) {
+	return libresign_theme_get_purchase_redirect_target();
 }
-add_filter( 'woocommerce_login_redirect', 'libresign_login_redirect', 10, 2 );
+add_filter( 'woocommerce_login_redirect', 'libresign_theme_login_redirect', 10, 2 );
 
 /**
  * Send users to their destination after registering.
  */
-function libresign_registration_redirect( $redirect ) {
-	return libresign_get_purchase_redirect_target();
+function libresign_theme_registration_redirect( $redirect ) {
+	return libresign_theme_get_purchase_redirect_target();
 }
-add_filter( 'woocommerce_registration_redirect', 'libresign_registration_redirect', 10, 1 );
+add_filter( 'woocommerce_registration_redirect', 'libresign_theme_registration_redirect', 10, 1 );

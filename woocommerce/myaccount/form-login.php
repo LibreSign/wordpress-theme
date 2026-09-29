@@ -22,12 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 do_action( 'woocommerce_before_customer_login_form' );
 
-$purchase_in_progress = function_exists( 'libresign_cart_has_items' ) && libresign_cart_has_items();
+$purchase_in_progress = function_exists( 'libresign_theme_cart_has_items' ) && libresign_theme_cart_has_items();
 $show_registration    = $purchase_in_progress && 'yes' === get_option( 'woocommerce_enable_myaccount_registration' );
-$redirect_to          = function_exists( 'libresign_get_purchase_redirect_target' ) ? libresign_get_purchase_redirect_target() : '';
-$policy_url           = function_exists( 'libresign_get_policy_url' ) ? libresign_get_policy_url() : home_url( '/privacy-policy/' );
+$redirect_to          = function_exists( 'libresign_theme_get_purchase_redirect_target' ) ? libresign_theme_get_purchase_redirect_target() : '';
+$policy_url           = function_exists( 'libresign_theme_get_policy_url' ) ? libresign_theme_get_policy_url() : home_url( '/privacy-policy/' );
 $lost_password_url    = function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url();
-$plans_url            = function_exists( 'libresign_get_plans_url' ) ? libresign_get_plans_url() : '';
+$plans_url            = function_exists( 'libresign_theme_get_plans_url' ) ? libresign_theme_get_plans_url() : '';
 $show_plans_cta       = ! $purchase_in_progress && '' !== $plans_url;
 $two_columns          = $show_registration || $show_plans_cta;
 ?>
@@ -47,7 +47,7 @@ $two_columns          = $show_registration || $show_plans_cta;
 				<label for="username">
 					<?php esc_html_e( 'Username or email address', 'woocommerce' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
 				</label>
-				<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="username" id="username" autocomplete="username" value="<?php echo ( ! empty( $_POST['username'] ) && is_string( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized ?>
+				<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="username" id="username" autocomplete="username" value="<?php echo ( ! empty( $_POST['username'] ) && is_string( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing ?>
 			</p>
 
 			<p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
@@ -110,7 +110,7 @@ $two_columns          = $show_registration || $show_plans_cta;
 					<label for="reg_username">
 						<?php esc_html_e( 'Username', 'woocommerce' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
 					</label>
-					<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="username" id="reg_username" autocomplete="username" value="<?php echo ( ! empty( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized ?>
+					<input type="text" class="woocommerce-Input woocommerce-Input--text input-text" name="username" id="reg_username" autocomplete="username" value="<?php echo ( ! empty( $_POST['username'] ) ) ? esc_attr( wp_unslash( $_POST['username'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing ?>
 				</p>
 
 			<?php endif; ?>
@@ -119,7 +119,7 @@ $two_columns          = $show_registration || $show_plans_cta;
 				<label for="reg_email">
 					<?php esc_html_e( 'Email address', 'woocommerce' ); ?>&nbsp;<span class="required" aria-hidden="true">*</span><span class="screen-reader-text"><?php esc_html_e( 'Required', 'woocommerce' ); ?></span>
 				</label>
-				<input type="email" class="woocommerce-Input woocommerce-Input--text input-text" name="email" id="reg_email" autocomplete="email" value="<?php echo ( ! empty( $_POST['email'] ) ) ? esc_attr( wp_unslash( $_POST['email'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized ?>
+				<input type="email" class="woocommerce-Input woocommerce-Input--text input-text" name="email" id="reg_email" autocomplete="email" value="<?php echo ( ! empty( $_POST['email'] ) ) ? esc_attr( wp_unslash( $_POST['email'] ) ) : ''; ?>" required aria-required="true" /> <?php // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing ?>
 			</p>
 
 			<?php if ( 'no' === get_option( 'woocommerce_registration_generate_password' ) ) : ?>

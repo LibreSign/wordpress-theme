@@ -10,8 +10,8 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Customize the checkout terms checkbox text to point at the policy page.
  */
-function libresign_checkout_policy_checkbox_text( $text ) {
-	$policy_url = libresign_get_policy_url();
+function libresign_theme_checkout_policy_checkbox_text( $text ) {
+	$policy_url = libresign_theme_get_policy_url();
 
 	return sprintf(
 		/* translators: %s: policy page link */
@@ -23,12 +23,12 @@ function libresign_checkout_policy_checkbox_text( $text ) {
 		)
 	);
 }
-add_filter( 'woocommerce_get_terms_and_conditions_checkbox_text', 'libresign_checkout_policy_checkbox_text' );
+add_filter( 'woocommerce_get_terms_and_conditions_checkbox_text', 'libresign_theme_checkout_policy_checkbox_text' );
 
 /**
  * Prevent checkout submission without policy terms acceptance.
  */
-function libresign_validate_checkout_policy_consent( $data, $errors ) {
+function libresign_theme_validate_checkout_policy_consent( $data, $errors ) {
 	if ( empty( $data['terms'] ) ) {
 		$errors->add(
 			'libresign_policy_consent',
@@ -36,4 +36,4 @@ function libresign_validate_checkout_policy_consent( $data, $errors ) {
 		);
 	}
 }
-add_action( 'woocommerce_after_checkout_validation', 'libresign_validate_checkout_policy_consent', 10, 2 );
+add_action( 'woocommerce_after_checkout_validation', 'libresign_theme_validate_checkout_policy_consent', 10, 2 );
