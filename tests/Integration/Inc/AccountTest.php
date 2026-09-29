@@ -44,6 +44,12 @@ final class AccountTest extends WP_UnitTestCase {
 		$this->assertSame( libresign_theme_get_account_url(), libresign_theme_get_purchase_redirect_target() );
 	}
 
+	public function test_ignores_a_redirect_that_is_not_a_single_url() {
+		$_REQUEST['redirect_to'] = array( '/store/' );
+
+		$this->assertSame( libresign_theme_get_account_url(), libresign_theme_get_purchase_redirect_target() );
+	}
+
 	public function test_goes_to_checkout_while_buying() {
 		$this->store->add_to_cart( $this->store->plan() );
 

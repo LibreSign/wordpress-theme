@@ -34,7 +34,7 @@ function libresign_theme_get_account_url() {
 function libresign_theme_get_purchase_redirect_target() {
 	$redirect_to = '';
 
-	if ( isset( $_REQUEST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_REQUEST['redirect_to'] ) && is_string( $_REQUEST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$redirect_to = wp_sanitize_redirect( wp_unslash( $_REQUEST['redirect_to'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
