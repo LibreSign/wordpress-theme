@@ -7,8 +7,11 @@ test.describe( 'Asking Brazilian customers for their CPF or CNPJ', () => {
 		await addThePlanToTheCart( page );
 	} );
 
-	test( 'hides the field outside Brazil', async ( { page } ) => {
-		await fillTheBillingAddress( page, 'Portugal' );
+	test( 'shows the field only in Brazil', async ( { page } ) => {
+		await fillTheBillingAddress( page, 'Brazil' );
+		await expect( page.getByLabel( 'CPF or CNPJ' ) ).toBeVisible();
+
+		await page.locator( '#billing-country' ).selectOption( { label: 'Portugal' } );
 
 		await expect( page.getByLabel( 'CPF or CNPJ' ) ).toBeHidden();
 	} );

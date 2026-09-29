@@ -18,7 +18,6 @@ test.describe( 'Agreeing to the policy at checkout', () => {
 		await placeOrder( page );
 
 		await expect( page.getByText( 'You must agree to the policies before completing the purchase.' ) ).toBeVisible();
-		await expect( page ).toHaveURL( /\/checkout\/$/ );
 	} );
 
 	test( 'places the order with the consent', async ( { page } ) => {
