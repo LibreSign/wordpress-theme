@@ -125,85 +125,12 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 		yield 'branch name'      => array( 'libresign_site_deploy_branch_name', 'LIBRESIGN_SITE_DEPLOY_BRANCH_NAME', 'gh-pages', 'libresign_theme_site_deploy_branch_name' );
 	}
 
-	/**
-	 * @dataProvider provide_signatures
-	 */
-	public function test_verifies_the_signature( $body, $signature, $secret, $valid ) {
-		$this->assertSame( $valid, libresign_theme_verify_github_webhook_signature( $body, $signature, $secret ) );
-	}
+	public function test_syncs_a_deploy_of_the_configured_branch() {
+		set_theme_mod( 'libresign_site_deploy_branch_name', 'production' );
 
-	public static function provide_signatures() {
-		$body      = '{"zen":"Keep it logically awesome."}';
-		$signature = hash_hmac( 'sha256', $body, self::SECRET );
+		$response = $this->deliver( 'workflow_run', $this->production_deploy( array( 'workflow_run' => array( 'head_branch' => 'production' ) ) ) );
 
-		yield 'with the sha256 prefix'      => array( $body, 'sha256=' . $signature, self::SECRET, true );
-		yield 'without the prefix'          => array( $body, $signature, self::SECRET, true );
-		yield 'in upper case'               => array( $body, 'SHA256=' . strtoupper( $signature ), self::SECRET, true );
-		yield 'another secret'              => array( $body, 'sha256=' . $signature, 'other', false );
-		yield 'another body'                => array( '{}', 'sha256=' . $signature, self::SECRET, false );
-		yield 'not hexadecimal'             => array( $body, 'sha256=zz', self::SECRET, false );
-		yield 'no signature'                => array( $body, '', self::SECRET, false );
-		yield 'no secret'                   => array( $body, 'sha256=' . $signature, ' ', false );
-		yield 'no body'                     => array( '', 'sha256=' . $signature, self::SECRET, false );
-	}
-
-	/**
-	 * @dataProvider provide_user_agents
-	 */
-	public function test_recognizes_the_github_user_agent( $user_agent, $expected ) {
-		$this->assertSame( $expected, libresign_theme_is_github_hookshot_user_agent( $user_agent ) );
-	}
-
-	public static function provide_user_agents() {
-		yield 'github'                  => array( 'GitHub-Hookshot/044aadd', true );
-		yield 'github with whitespace'  => array( ' GitHub-Hookshot/044aadd ', true );
-		yield 'a browser'               => array( 'Mozilla/5.0', false );
-		yield 'github in the middle'    => array( 'curl GitHub-Hookshot/1', false );
-	}
-
-	/**
-	 * @dataProvider provide_workflow_names
-	 */
-	public function test_reads_the_workflow_name( $payload, $name ) {
-		$this->assertSame( $name, libresign_theme_site_deploy_workflow_name_from_payload( $payload ) );
-	}
-
-	public static function provide_workflow_names() {
-		yield 'from the run'                    => array( array( 'workflow_run' => array( 'name' => ' Deploy ' ) ), 'Deploy' );
-		yield 'from the workflow'               => array( array( 'workflow' => array( 'name' => 'Deploy' ) ), 'Deploy' );
-		yield 'the run wins over the workflow'  => array( array( 'workflow_run' => array( 'name' => 'Run' ), 'workflow' => array( 'name' => 'Workflow' ) ), 'Run' );
-		yield 'none'                            => array( array(), '' );
-	}
-
-	/**
-	 * @dataProvider provide_deploy_runs
-	 */
-	public function test_recognizes_the_production_deploy( $changes, $expected ) {
-		$this->assertSame( $expected, libresign_theme_is_production_site_deploy_workflow_run( $this->production_deploy( $changes ) ) );
-	}
-
-	public static function provide_deploy_runs() {
-		yield 'the production deploy'   => array( array(), true );
-		yield 'another repository'      => array( array( 'repository' => array( 'full_name' => 'LibreSign/other' ) ), false );
-		yield 'still running'           => array( array( 'action' => 'in_progress' ), false );
-		yield 'failed'                  => array( array( 'workflow_run' => array( 'conclusion' => 'failure' ) ), false );
-		yield 'another branch'          => array( array( 'workflow_run' => array( 'head_branch' => 'main' ) ), false );
-		yield 'another workflow'        => array( array( 'workflow_run' => array( 'name' => 'Tests' ) ), false );
-	}
-
-	/**
-	 * @dataProvider provide_deploy_starts
-	 */
-	public function test_recognizes_the_deploy_starting( $changes, $expected ) {
-		$this->assertSame( $expected, libresign_theme_is_site_deploy_starting( $this->deploy_starting( $changes ) ) );
-	}
-
-	public static function provide_deploy_starts() {
-		yield 'the deploy starting on main'  => array( array(), true );
-		yield 'another repository'           => array( array( 'repository' => array( 'full_name' => 'LibreSign/other' ) ), false );
-		yield 'completed'                    => array( array( 'action' => 'completed' ), false );
-		yield 'another branch'               => array( array( 'workflow_run' => array( 'head_branch' => 'gh-pages' ) ), false );
-		yield 'another workflow'             => array( array( 'workflow_run' => array( 'name' => 'Tests' ) ), false );
+		$this->assertSame( 'libresign_theme_site_fragment_http_status', $response->get_data()['code'] );
 	}
 
 	public function test_handles_each_delivery_once() {

@@ -22,6 +22,11 @@
         "wp-phpunit/wp-phpunit": "^7.0",
         "wpackagist-plugin/woocommerce": "^11.0"
     },
+    "autoload": {
+        "psr-4": {
+            "LibreSign\\WordPressTheme\\": "src/"
+        }
+    },
     "autoload-dev": {
         "psr-4": {
             "LibreSign\\WordPressTheme\\Tests\\": "tests/"
@@ -55,8 +60,10 @@
         "cs:fix": "phpcbf",
         "stan": "phpstan analyse --memory-limit=2G",
         "test": [
+            "@test:unit",
             "@test:integration"
         ],
+        "test:unit": "phpunit",
         "test:integration": "phpunit -c phpunit-integration.xml.dist",
         "ci": [
             "@lint",

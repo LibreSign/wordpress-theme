@@ -24,69 +24,10 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		parent::tear_down();
 	}
 
-	/**
-	 * @dataProvider provide_locales
-	 */
-	public function test_normalizes_a_locale_into_a_language_tag( $locale, $tag, $storage_key ) {
-		$this->assertSame( $tag, libresign_theme_site_fragment_normalize_locale_tag( $locale ) );
-		$this->assertSame( $storage_key, libresign_theme_site_fragment_storage_key( $locale ) );
-	}
-
-	public static function provide_locales() {
-		yield 'a wordpress locale'           => array( 'pt_BR', 'pt-BR', 'pt-BR' );
-		yield 'a language alone'             => array( 'FR', 'fr', 'fr' );
-		yield 'a script subtag'              => array( 'zh_hant_tw', 'zh-Hant-TW', 'zh-Hant-TW' );
-		yield 'a numeric region'             => array( 'es-419', 'es-419', 'es-419' );
-		yield 'a long variant stays as is'   => array( 'de-DE-1901x', 'de-DE-1901x', 'de-DE-1901x' );
-		yield 'repeated separators'          => array( 'en--us', 'en-US', 'en-US' );
-		yield 'surrounding whitespace'       => array( ' nb_NO ', 'nb-NO', 'nb-NO' );
-		yield 'only separators'              => array( '-_', '', 'default' );
-		yield 'empty'                        => array( '', '', 'default' );
-	}
-
-	/**
-	 * @dataProvider provide_fragment_urls
-	 */
-	public function test_builds_the_fragment_url( $origin, $fragment_type, $locale, $url ) {
-		$this->assertSame( $url, libresign_theme_site_fragment_url( $origin, $fragment_type, $locale ) );
-	}
-
-	public static function provide_fragment_urls() {
-		yield 'the default header'          => array( 'https://libresign.coop', 'header', '', 'https://libresign.coop/fragments/header' );
-		yield 'a localized footer'          => array( 'https://libresign.coop/', 'footer', 'pt_BR', 'https://libresign.coop/fragments/pt-BR/footer' );
-		yield 'an origin with whitespace'   => array( ' https://libresign.coop/ ', 'header', 'fr', 'https://libresign.coop/fragments/fr/header' );
-	}
-
 	public function test_stores_each_fragment_type_in_its_own_folder() {
 		$this->assertSame( array( 'header', 'footer' ), libresign_theme_site_fragment_supported_types() );
 		$this->assertStringEndsWith( '/libresign-header', libresign_theme_site_fragment_storage_base_dir( 'header' ) );
 		$this->assertStringEndsWith( '/libresign-footer', libresign_theme_site_fragment_storage_base_url( 'footer' ) );
-	}
-
-	public function test_reads_the_asset_urls_of_a_fragment() {
-		$this->assertSame(
-			array(
-				'css' => 'https://libresign.coop/header.css',
-				'js'  => 'https://libresign.coop/header.js',
-			),
-			libresign_theme_site_fragment_extract_asset_urls( "<header data-fragment-css='https://libresign.coop/header.css' data-fragment-js=\"https://libresign.coop/header.js\"></header>" )
-		);
-	}
-
-	public function test_a_fragment_without_asset_urls_is_an_error() {
-		$error = libresign_theme_site_fragment_extract_asset_urls( '<header data-fragment-css="/header.css"></header>' );
-
-		$this->assertWPError( $error );
-		$this->assertSame( 'libresign_theme_site_fragment_missing_assets', $error->get_error_code() );
-	}
-
-	public function test_reads_the_locales_the_header_links_to() {
-		$this->assertSame(
-			array( 'pt-BR', 'fr', '' ),
-			libresign_theme_site_fragment_extract_locales_from_header_html(
-				'<a href="/fragments/pt_BR/header">pt</a><a href="https://libresign.coop/fragments/fr/header#top">fr</a><a href="/fragments/header?x=1">en</a><a href="/fragments/footer">footer</a>'
-			)
-		);
 	}
 
 	public function test_falls_back_to_the_site_locale() {
@@ -95,31 +36,6 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 
 	public function test_looks_the_locale_up_from_the_most_specific_to_the_default() {
 		$this->assertSame( array( 'en-US', 'en', 'default' ), libresign_theme_site_fragment_locale_lookup_keys() );
-	}
-
-	public function test_drops_the_asset_attributes_after_syncing() {
-		$this->assertSame(
-			'<header class="site">x</header>',
-			libresign_theme_site_fragment_strip_runtime_asset_attributes( '<header data-fragment-css="/a.css" class="site" data-fragment-js=\'/a.js\'>x</header>' )
-		);
-	}
-
-	/**
-	 * @dataProvider provide_root_relative_urls
-	 */
-	public function test_points_root_relative_urls_to_the_static_site( $content, $rewritten ) {
-		$this->assertSame( $rewritten, libresign_theme_site_fragment_rewrite_root_relative_urls( $content, 'https://libresign.coop/' ) );
-	}
-
-	public static function provide_root_relative_urls() {
-		yield 'a link'                          => array( '<a href="/pricing/">', '<a href="https://libresign.coop/pricing/">' );
-		yield 'an image with single quotes'     => array( "<img src='/logo.svg'>", "<img src='https://libresign.coop/logo.svg'>" );
-		yield 'a form and a video poster'       => array( '<form action="/s"><video poster="/p.png">', '<form action="https://libresign.coop/s"><video poster="https://libresign.coop/p.png">' );
-		yield 'a css url without quotes'        => array( 'a{background:url(/bg.png)}', 'a{background:url(https://libresign.coop/bg.png)}' );
-		yield 'a css url with quotes'           => array( 'a{background:url( "/bg.png" )}', 'a{background:url("https://libresign.coop/bg.png")}' );
-		yield 'a protocol relative url'         => array( '<img src="//cdn.example.com/a.png">', '<img src="//cdn.example.com/a.png">' );
-		yield 'an absolute url'                 => array( '<a href="https://github.com/">', '<a href="https://github.com/">' );
-		yield 'a relative path'                 => array( '<a href="pricing/">', '<a href="pricing/">' );
 	}
 
 	public function test_only_a_not_found_is_an_optional_error() {

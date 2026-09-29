@@ -12,46 +12,6 @@ use WP_UnitTestCase;
 
 final class CpfCnpjTest extends WP_UnitTestCase {
 
-	/**
-	 * @dataProvider provide_cpfs
-	 */
-	public function test_validates_a_cpf( $cpf, $valid ) {
-		$this->assertSame( $valid, libresign_theme_validate_cpf( $cpf ) );
-	}
-
-	public static function provide_cpfs() {
-		yield 'digits only'                  => array( '52998224725', true );
-		yield 'formatted'                    => array( '529.982.247-25', true );
-		yield 'another valid one'            => array( '123.456.789-09', true );
-		yield 'wrong first check digit'      => array( '529.982.247-35', false );
-		yield 'wrong second check digit'     => array( '529.982.247-24', false );
-		yield 'every digit the same'         => array( '111.111.111-11', false );
-		yield 'too short'                    => array( '5299822472', false );
-		yield 'too long'                     => array( '529982247250', false );
-		yield 'empty'                        => array( '', false );
-	}
-
-	/**
-	 * @dataProvider provide_cnpjs
-	 */
-	public function test_validates_a_cnpj( $cnpj, $valid ) {
-		$this->assertSame( $valid, libresign_theme_validate_cnpj( $cnpj ) );
-	}
-
-	public static function provide_cnpjs() {
-		yield 'digits only'                           => array( '11222333000181', true );
-		yield 'formatted'                             => array( '11.222.333/0001-81', true );
-		yield 'alphanumeric'                          => array( '12.ABC.345/01DE-35', true );
-		yield 'alphanumeric in lowercase'             => array( '12.abc.345/01de-35', true );
-		yield 'wrong second check digit'              => array( '11.222.333/0001-80', false );
-		yield 'wrong alphanumeric check digit'        => array( '12.ABC.345/01DE-34', false );
-		yield 'letters in the check digits'           => array( '12.ABC.345/01DE-3A', false );
-		yield 'every digit the same'                  => array( '00.000.000/0000-00', false );
-		yield 'symbols other than the formatting'     => array( '12.ABC.345/01D*-35', false );
-		yield 'too short'                             => array( '1122233300018', false );
-		yield 'empty'                                 => array( '', false );
-	}
-
 	public function test_registers_the_field_in_the_address_form() {
 		__internal_woocommerce_blocks_deregister_checkout_field( 'libresign/cpf-cnpj' );
 
