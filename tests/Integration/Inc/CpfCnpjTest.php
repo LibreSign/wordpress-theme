@@ -53,6 +53,10 @@ final class CpfCnpjTest extends WP_UnitTestCase {
 	}
 
 	public function test_registers_the_field_in_the_address_form() {
+		__internal_woocommerce_blocks_deregister_checkout_field( 'libresign/cpf-cnpj' );
+
+		libresign_theme_register_cpf_cnpj_field();
+
 		$field = Package::container()->get( CheckoutFields::class )->get_additional_fields()['libresign/cpf-cnpj'];
 
 		$this->assertSame( 'CPF or CNPJ', $field['label'] );

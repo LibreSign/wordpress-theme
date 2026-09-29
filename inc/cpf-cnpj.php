@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Register the CPF/CNPJ field in the checkout address section.
  */
-add_action( 'woocommerce_init', function () {
+function libresign_theme_register_cpf_cnpj_field() {
 	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
 		return;
 	}
@@ -29,11 +29,11 @@ add_action( 'woocommerce_init', function () {
 			'type'       => 'text',
 			'attributes' => array(
 				'autocomplete' => 'off',
-				'placeholder'  => __( 'Required for customers in Brazil', 'libresign' ),
 			),
 		)
 	);
-} );
+}
+add_action( 'woocommerce_init', 'libresign_theme_register_cpf_cnpj_field' );
 
 /**
  * Validate CPF — 11-digit Brazilian individual taxpayer ID.
