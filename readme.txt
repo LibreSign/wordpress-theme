@@ -73,6 +73,17 @@ On the local SaaS stack:
     docker exec -w /var/www/html/wp-content/themes/libresign \
       wordpress-docker-wordpress-1 composer test
 
+The browser tests in `tests/E2E` cover creating a workspace together with a plan,
+the CPF/CNPJ field and the policy consent at checkout, and the lost password page.
+They need Docker, Node.js and a `composer install`, since the stack mounts
+WooCommerce from `vendor/test-plugins`:
+
+    npm ci
+    npx playwright install chromium
+    npm run env:start    # WordPress on :8889
+    npm run test:e2e
+    npm run env:stop
+
 == Development notes ==
 
 - Site fragment sync/render bootstrap: `inc/footer-fragment.php`
