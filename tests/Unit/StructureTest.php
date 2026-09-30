@@ -62,7 +62,12 @@ final class StructureTest extends TestCase {
 
 	private static function files_covered_by( $file ) {
 		if ( str_starts_with( $file, 'tests/E2E/' ) ) {
-			return array( self::theme_path( substr( $file, strlen( 'tests/E2E/' ), -strlen( '.spec.ts' ) ) ) . '.php' );
+			$name = substr( $file, strlen( 'tests/E2E/' ), -strlen( '.spec.ts' ) );
+
+			return array(
+				'src/' . $name . '.php',
+				self::theme_path( $name ) . '.php',
+			);
 		}
 
 		if ( str_starts_with( $file, 'tests/Unit/' ) ) {
@@ -93,9 +98,6 @@ final class StructureTest extends TestCase {
 	}
 
 	private static function theme_path( $test_path ) {
-		$parts = explode( '/', $test_path );
-		$file  = array_pop( $parts );
-
-		return implode( '/', array_merge( array_map( 'strtolower', $parts ), array( strtolower( (string) preg_replace( '/(?<!^)[A-Z]/', '-$0', $file ) ) ) ) );
+		return implode( '/', array_map( static fn ( $part ) => strtolower( (string) preg_replace( '/(?<!^)[A-Z]/', '-$0', $part ) ), explode( '/', $test_path ) ) );
 	}
 }
