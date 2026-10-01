@@ -8,6 +8,7 @@ parameters:
     paths:
         - functions.php
         - inc
+        - src
         - patterns
         - woocommerce
         - tests

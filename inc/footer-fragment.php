@@ -7,9 +7,11 @@
  * only the GitHub deploy webhook triggers a background refresh.
  */
 
+use LibreSign\WordPressTheme\SiteFragment;
+
 defined( 'ABSPATH' ) || exit;
 
-const LIBRESIGN_THEME_SITE_FRAGMENT_DEFAULT_LOCALE_KEY = 'default';
+require_once dirname( __DIR__ ) . '/src/SiteFragment.php';
 
 /**
  * Return the supported fragment types.
@@ -28,69 +30,6 @@ function libresign_theme_site_fragment_supported_types() {
  */
 function libresign_theme_site_fragment_storage_directory_name( $fragment_type ) {
 	return 'header' === $fragment_type ? 'libresign-header' : 'libresign-footer';
-}
-
-/**
- * Normalize a site origin string.
- *
- * @param string $site_origin Raw site origin.
- * @return string
- */
-function libresign_theme_site_fragment_normalize_site_origin( $site_origin ) {
-	return rtrim( trim( (string) $site_origin ), '/' );
-}
-
-/**
- * Normalize a locale/tag into a path-friendly BCP47-style value.
- *
- * @param string $locale Raw locale/tag.
- * @return string
- */
-function libresign_theme_site_fragment_normalize_locale_tag( $locale ) {
-	$locale = trim( str_replace( '_', '-', (string) $locale ) );
-
-	if ( '' === $locale ) {
-		return '';
-	}
-
-	$parts = array_values( array_filter( explode( '-', $locale ), static fn ( $part ) => '' !== $part ) );
-	if ( empty( $parts ) ) {
-		return '';
-	}
-
-	$parts[0] = strtolower( $parts[0] );
-
-	foreach ( $parts as $index => $part ) {
-		if ( 0 === $index ) {
-			continue;
-		}
-
-		if ( 2 === strlen( $part ) || 3 === strlen( $part ) ) {
-			$parts[ $index ] = strtoupper( $part );
-			continue;
-		}
-
-		if ( 4 === strlen( $part ) ) {
-			$parts[ $index ] = ucfirst( strtolower( $part ) );
-			continue;
-		}
-
-		$parts[ $index ] = $part;
-	}
-
-	return implode( '-', $parts );
-}
-
-/**
- * Convert locale to storage key.
- *
- * @param string $locale Locale.
- * @return string
- */
-function libresign_theme_site_fragment_storage_key( $locale ) {
-	$locale = libresign_theme_site_fragment_normalize_locale_tag( $locale );
-
-	return '' === $locale ? LIBRESIGN_THEME_SITE_FRAGMENT_DEFAULT_LOCALE_KEY : $locale;
 }
 
 /**
@@ -115,28 +54,6 @@ function libresign_theme_site_fragment_storage_base_url( $fragment_type ) {
 	$uploads = wp_upload_dir();
 
 	return trailingslashit( $uploads['baseurl'] ) . libresign_theme_site_fragment_storage_directory_name( $fragment_type );
-}
-
-/**
- * Build the published fragment URL.
- *
- * @param string $site_origin   Static site origin.
- * @param string $fragment_type Fragment type.
- * @param string $locale        Locale.
- * @return string
- */
-function libresign_theme_site_fragment_url( $site_origin, $fragment_type, $locale ) {
-	$site_origin = libresign_theme_site_fragment_normalize_site_origin( $site_origin );
-	$locale      = libresign_theme_site_fragment_normalize_locale_tag( $locale );
-	$path        = '/fragments/';
-
-	if ( '' !== $locale ) {
-		$path .= rawurlencode( $locale ) . '/';
-	}
-
-	$path .= $fragment_type;
-
-	return $site_origin . $path;
 }
 
 /**
@@ -199,50 +116,6 @@ function libresign_theme_site_fragment_is_optional_http_error( $error ) {
 }
 
 /**
- * Extract CSS/JS fragment asset URLs from fragment HTML.
- *
- * @param string $html Fragment HTML.
- * @return array<string, string>|WP_Error
- */
-function libresign_theme_site_fragment_extract_asset_urls( $html ) {
-	if (
-		! preg_match( '/\bdata-fragment-css=("|\')([^"\']+)\1/i', $html, $css_matches )
-		|| ! preg_match( '/\bdata-fragment-js=("|\')([^"\']+)\1/i', $html, $js_matches )
-	) {
-		return new WP_Error(
-			'libresign_theme_site_fragment_missing_assets',
-			__( 'Fragment HTML is missing the expected CSS/JS references.', 'libresign' )
-		);
-	}
-
-	return array(
-		'css' => (string) $css_matches[2],
-		'js'  => (string) $js_matches[2],
-	);
-}
-
-/**
- * Extract discovered locales from the default header fragment HTML.
- *
- * @param string $html Header fragment HTML.
- * @return array<int, string>
- */
-function libresign_theme_site_fragment_extract_locales_from_header_html( $html ) {
-	$locales = array();
-
-	if ( preg_match_all( '~\/fragments(?:\/([^\/#?"\']+))?\/header(?:[\/#?"\']|$)~i', $html, $matches ) ) {
-		foreach ( $matches[1] as $locale ) {
-			$locale = libresign_theme_site_fragment_normalize_locale_tag( rawurldecode( (string) $locale ) );
-			$locales[] = $locale;
-		}
-	}
-
-	$locales[] = '';
-
-	return array_values( array_unique( array_filter( $locales, 'is_string' ) ) );
-}
-
-/**
  * Build fallback locales from the local WordPress language context.
  *
  * @return array<int, string>
@@ -266,53 +139,9 @@ function libresign_theme_site_fragment_fallback_locales() {
 	$candidates[] = get_locale();
 	$candidates[] = '';
 
-	$candidates = array_map( 'libresign_theme_site_fragment_normalize_locale_tag', $candidates );
+	$candidates = array_map( array( SiteFragment::class, 'language_tag' ), $candidates );
 
 	return array_values( array_unique( array_filter( $candidates, 'is_string' ) ) );
-}
-
-/**
- * Remove fragment asset data attributes after syncing.
- *
- * @param string $html Fragment HTML.
- * @return string
- */
-function libresign_theme_site_fragment_strip_runtime_asset_attributes( $html ) {
-	$html = preg_replace( '/\s+data-fragment-css=("|\')[^"\']+\1/i', '', $html ) ?? $html;
-	$html = preg_replace( '/\s+data-fragment-js=("|\')[^"\']+\1/i', '', $html ) ?? $html;
-
-	return $html;
-}
-
-/**
- * Rewrite root-relative URLs so stored artifacts continue pointing at the static site.
- *
- * @param string $content     Content to rewrite.
- * @param string $site_origin Static site origin.
- * @return string
- */
-function libresign_theme_site_fragment_rewrite_root_relative_urls( $content, $site_origin ) {
-	$site_origin = libresign_theme_site_fragment_normalize_site_origin( $site_origin );
-
-	$content = preg_replace_callback(
-		'/\b(href|src|action|poster)=("|\')(\/(?!\/)[^"\']*)\2/i',
-		static function ( $matches ) use ( $site_origin ) {
-			return $matches[1] . '=' . $matches[2] . $site_origin . $matches[3] . $matches[2];
-		},
-		$content
-	) ?? $content;
-
-	$content = preg_replace_callback(
-		'~url\(\s*(?:("|\')\s*)?(\/(?!\/)[^)"\']+)(?:\s*\1)?\s*\)~i',
-		static function ( $matches ) use ( $site_origin ) {
-			$quote = $matches[1];
-
-			return 'url(' . $quote . $site_origin . $matches[2] . $quote . ')';
-		},
-		$content
-	) ?? $content;
-
-	return $content;
 }
 
 /**
@@ -324,7 +153,7 @@ function libresign_theme_site_fragment_rewrite_root_relative_urls( $content, $si
  * @return array<string, mixed>|WP_Error
  */
 function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragment_types, $context = array() ) {
-	$site_origin = libresign_theme_site_fragment_normalize_site_origin( $site_origin );
+	$site_origin = SiteFragment::origin( $site_origin );
 	if ( '' === $site_origin ) {
 		return new WP_Error(
 			'libresign_theme_site_fragment_origin_missing',
@@ -332,7 +161,7 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 		);
 	}
 
-	$default_header_url      = libresign_theme_site_fragment_url( $site_origin, 'header', '' );
+	$default_header_url      = SiteFragment::url( $site_origin, 'header', '' );
 	$default_header_response = libresign_theme_site_fragment_fetch_url( $default_header_url );
 	if ( is_wp_error( $default_header_response ) ) {
 		return $default_header_response;
@@ -340,7 +169,7 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 
 	$locales = array_merge(
 		array( '' ),
-		libresign_theme_site_fragment_extract_locales_from_header_html( (string) $default_header_response['body'] ),
+		SiteFragment::linked_locales( (string) $default_header_response['body'] ),
 		libresign_theme_site_fragment_fallback_locales()
 	);
 	$locales = array_values( array_unique( $locales ) );
@@ -353,7 +182,7 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 		$summary[ $fragment_type ] = array();
 
 		foreach ( $locales as $locale ) {
-			$fragment_url = libresign_theme_site_fragment_url( $site_origin, $fragment_type, $locale );
+			$fragment_url = SiteFragment::url( $site_origin, $fragment_type, $locale );
 
 			if ( 'header' === $fragment_type && '' === $locale ) {
 				$fragment_response = $default_header_response;
@@ -369,13 +198,16 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 				return $fragment_response;
 			}
 
-			$asset_urls = libresign_theme_site_fragment_extract_asset_urls( (string) $fragment_response['body'] );
-			if ( is_wp_error( $asset_urls ) ) {
+			$asset_urls = SiteFragment::asset_urls( (string) $fragment_response['body'] );
+			if ( null === $asset_urls ) {
 				if ( '' !== $locale ) {
 					continue;
 				}
 
-				return $asset_urls;
+				return new WP_Error(
+					'libresign_theme_site_fragment_missing_assets',
+					__( 'Fragment HTML is missing the expected CSS/JS references.', 'libresign' )
+				);
 			}
 
 			foreach ( array( 'css', 'js' ) as $asset_type ) {
@@ -390,15 +222,15 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 				}
 			}
 
-			$html = libresign_theme_site_fragment_strip_runtime_asset_attributes( (string) $fragment_response['body'] );
-			$html = libresign_theme_site_fragment_rewrite_root_relative_urls( $html, $site_origin );
-			$css  = libresign_theme_site_fragment_rewrite_root_relative_urls( (string) $asset_cache[ $asset_urls['css'] ], $site_origin );
-			$js   = libresign_theme_site_fragment_rewrite_root_relative_urls( (string) $asset_cache[ $asset_urls['js'] ], $site_origin );
+			$html = SiteFragment::without_asset_attributes( (string) $fragment_response['body'] );
+			$html = SiteFragment::with_absolute_urls( $html, $site_origin );
+			$css  = SiteFragment::with_absolute_urls( (string) $asset_cache[ $asset_urls['css'] ], $site_origin );
+			$js   = SiteFragment::with_absolute_urls( (string) $asset_cache[ $asset_urls['js'] ], $site_origin );
 
 			$artifact = array(
 				'fragment_type' => $fragment_type,
-				'locale'        => libresign_theme_site_fragment_normalize_locale_tag( $locale ),
-				'locale_key'    => libresign_theme_site_fragment_storage_key( $locale ),
+				'locale'        => SiteFragment::language_tag( $locale ),
+				'locale_key'    => SiteFragment::storage_key( $locale ),
 				'fragment_url'  => $fragment_url,
 				'css_url'       => (string) $asset_urls['css'],
 				'js_url'        => (string) $asset_urls['js'],
@@ -516,7 +348,7 @@ function libresign_theme_sync_site_fragments_from_origin( $site_origin, $fragmen
 	}
 
 	return array(
-		'origin'  => libresign_theme_site_fragment_normalize_site_origin( $site_origin ),
+		'origin'  => SiteFragment::origin( $site_origin ),
 		'synced'  => $persisted,
 		'locales' => $collected['locales'],
 	);
@@ -538,20 +370,7 @@ function libresign_theme_site_fragment_locale_lookup_keys() {
 	$candidates[] = (string) determine_locale();
 	$candidates[] = (string) get_locale();
 
-	$keys = array();
-	foreach ( $candidates as $candidate ) {
-		$normalized = libresign_theme_site_fragment_normalize_locale_tag( $candidate );
-		if ( '' === $normalized ) {
-			continue;
-		}
-
-		$keys[] = $normalized;
-		$keys[] = strtolower( strtok( $normalized, '-' ) );
-	}
-
-	$keys[] = LIBRESIGN_THEME_SITE_FRAGMENT_DEFAULT_LOCALE_KEY;
-
-	return array_values( array_unique( $keys ) );
+	return SiteFragment::lookup_keys( $candidates );
 }
 
 /**

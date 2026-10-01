@@ -10,7 +10,11 @@
  * @package libresign
  */
 
+use LibreSign\WordPressTheme\TaxId;
+
 defined( 'ABSPATH' ) || exit;
+
+require_once dirname( __DIR__ ) . '/src/TaxId.php';
 
 /**
  * Register the CPF/CNPJ field in the checkout address section.
@@ -36,89 +40,6 @@ function libresign_theme_register_cpf_cnpj_field() {
 add_action( 'woocommerce_init', 'libresign_theme_register_cpf_cnpj_field' );
 
 /**
- * Validate CPF — 11-digit Brazilian individual taxpayer ID.
- *
- * Uses the standard Módulo 11 algorithm with decreasing weights 10..2 / 11..2.
- *
- * @param string $cpf Raw or formatted CPF (dots and dash are stripped).
- * @return bool
- */
-function libresign_theme_validate_cpf( string $cpf ): bool {
-	$cpf = preg_replace( '/[^0-9]/', '', $cpf );
-	if ( strlen( $cpf ) !== 11 ) {
-		return false;
-	}
-	// All identical digits (e.g. 000.000.000-00) are never valid.
-	if ( preg_match( '/^(\d)\1{10}$/', $cpf ) ) {
-		return false;
-	}
-
-	$mod11 = function ( string $str, int $start_weight ): int {
-		$sum = 0;
-		$w   = $start_weight;
-		for ( $i = 0; $i < strlen( $str ); $i++ ) {
-			$sum += (int) $str[ $i ] * $w--;
-		}
-		$rem = $sum % 11;
-		return $rem < 2 ? 0 : 11 - $rem;
-	};
-
-	$dv1 = $mod11( substr( $cpf, 0, 9 ), 10 );
-	if ( $dv1 !== (int) $cpf[9] ) {
-		return false;
-	}
-	return $mod11( substr( $cpf, 0, 10 ), 11 ) === (int) $cpf[10];
-}
-
-/**
- * Validate CNPJ — 14-character Brazilian company taxpayer ID.
- *
- * Handles both the legacy numeric format and the new alphanumeric format
- * introduced by Instrução Normativa RFB nº 2.119/2022 (Anexo Único):
- *  - Positions  1–12: alphanumeric  (root 8 chars + order 4 chars)
- *  - Positions 13–14: numeric check digits
- *
- * Algorithm: Módulo 11 with weights 2–9 assigned right-to-left, cycling
- * back to 2 after reaching 9. Character value = ord(char) − 48, which gives
- * the digit value for '0'–'9' (ASCII 48–57) and 17–42 for 'A'–'Z'
- * (ASCII 65–90), exactly as specified in the Receita Federal table.
- *
- * @param string $cnpj Raw or formatted CNPJ (dots, slash, dash are stripped).
- * @return bool
- */
-function libresign_theme_validate_cnpj( string $cnpj ): bool {
-	$cnpj = strtoupper( preg_replace( '/[\.\-\/]/', '', $cnpj ) );
-	if ( strlen( $cnpj ) !== 14 ) {
-		return false;
-	}
-	// All identical digits — applies to legacy numeric CNPJs.
-	if ( preg_match( '/^(\d)\1{13}$/', $cnpj ) ) {
-		return false;
-	}
-	// Positions 1–12: uppercase letters or digits; positions 13–14: digits.
-	if ( ! preg_match( '/^[A-Z0-9]{12}\d{2}$/', $cnpj ) ) {
-		return false;
-	}
-
-	$mod11 = function ( string $str ): int {
-		$sum = 0;
-		$w   = 2;
-		for ( $i = strlen( $str ) - 1; $i >= 0; $i-- ) {
-			$sum += ( ord( $str[ $i ] ) - 48 ) * $w;
-			$w    = 9 === $w ? 2 : $w + 1;
-		}
-		$rem = $sum % 11;
-		return $rem < 2 ? 0 : 11 - $rem;
-	};
-
-	$dv1 = $mod11( substr( $cnpj, 0, 12 ) );
-	if ( $dv1 !== (int) $cnpj[12] ) {
-		return false;
-	}
-	return $mod11( substr( $cnpj, 0, 13 ) ) === (int) $cnpj[13];
-}
-
-/**
  * Server-side enforcement via the address-location validation hook.
  *
  * This is the WooCommerce Blocks hook that receives the whole address group
@@ -135,25 +56,16 @@ add_action( 'woocommerce_blocks_validate_location_address_fields', function ( \W
 		return;
 	}
 
-	$value = isset( $fields['libresign/cpf-cnpj'] ) ? trim( (string) $fields['libresign/cpf-cnpj'] ) : '';
-	if ( '' === $value ) {
-		$errors->add( 'libresign_cpf_cnpj_required', __( 'Please enter your CPF or CNPJ.', 'libresign' ) );
-		return;
-	}
+	$messages = array(
+		'libresign_cpf_cnpj_required' => __( 'Please enter your CPF or CNPJ.', 'libresign' ),
+		'invalid_cnpj'                => __( 'Please enter a valid CNPJ.', 'libresign' ),
+		'invalid_cpf'                 => __( 'Please enter a valid CPF.', 'libresign' ),
+		'invalid_cpf_cnpj'            => __( 'Please enter a valid CPF (11 digits) or CNPJ (14 characters).', 'libresign' ),
+	);
 
-	$digits_only = preg_replace( '/[^0-9]/', '', $value );
-	$stripped    = strtoupper( preg_replace( '/[\.\-\/]/', '', $value ) );
-
-	if ( 14 === strlen( $stripped ) ) {
-		if ( ! libresign_theme_validate_cnpj( $value ) ) {
-			$errors->add( 'invalid_cnpj', __( 'Please enter a valid CNPJ.', 'libresign' ) );
-		}
-	} elseif ( 11 === strlen( $digits_only ) ) {
-		if ( ! libresign_theme_validate_cpf( $value ) ) {
-			$errors->add( 'invalid_cpf', __( 'Please enter a valid CPF.', 'libresign' ) );
-		}
-	} else {
-		$errors->add( 'invalid_cpf_cnpj', __( 'Please enter a valid CPF (11 digits) or CNPJ (14 characters).', 'libresign' ) );
+	$error_code = TaxId::error_code( isset( $fields['libresign/cpf-cnpj'] ) ? (string) $fields['libresign/cpf-cnpj'] : '' );
+	if ( '' !== $error_code ) {
+		$errors->add( $error_code, $messages[ $error_code ] );
 	}
 }, 10, 3 );
 
@@ -190,7 +102,7 @@ add_action( 'woocommerce_store_api_checkout_update_customer_from_request', funct
  *  1. Visibility — hides the field for non-BR customers and reveals it when
  *     the billing country is Brazil, surviving React re-renders via a
  *     MutationObserver.
- *  2. Validation — mirrors the PHP Módulo 11 algorithms above so the user
+ *  2. Validation — mirrors the Módulo 11 algorithms of src/TaxId.php so the user
  *     gets native WooCommerce Blocks error feedback (red border + message
  *     below the field) without a server round-trip. A re-entrancy guard
  *     prevents the wp.data subscriber from triggering itself in an infinite
@@ -249,7 +161,7 @@ add_action( 'wp_footer', function () {
 		}
 
 		// -----------------------------------------------------------------------
-		// Módulo 11 validation — mirrors the PHP functions in this file.
+		// Módulo 11 validation — mirrors src/TaxId.php.
 		// -----------------------------------------------------------------------
 
 		/**
