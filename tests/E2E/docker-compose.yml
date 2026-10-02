@@ -22,7 +22,7 @@ services:
       WORDPRESS_DB_PASSWORD: root
       WORDPRESS_DB_NAME: wordpress
     ports:
-      - "8889:80"
+      - "127.0.0.1:8889:80"
     healthcheck:
       test: ["CMD", "test", "-f", "/var/www/html/wp-config.php"]
       interval: 1s
