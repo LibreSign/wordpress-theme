@@ -58,6 +58,14 @@ Every check is a Composer script:
 - `composer stan`: PHPStan
 - `composer test`: PHPUnit
 - `composer ci`: all of the above, in this order
+- `composer coverage`: PHPUnit with a coverage report for octocov
+
+Every PHP file in `inc/`, `src/` and `woocommerce/` needs a test named after it,
+at the same path: under `tests/Integration` for `inc/` and `woocommerce/`, which
+need WordPress, and under `tests/Unit` or `tests/Integration` for `src/`. A browser
+test under `tests/E2E` follows the same names. `tests/Unit/StructureTest.php`
+enforces this and also fails on a test whose file no longer exists. In CI, octocov fails the run when line
+coverage is below 90% or below the last report of `main` (`.octocov.yml`).
 
 `composer install` brings in WordPress, the WordPress test suite and WooCommerce,
 so the tests only need a MySQL/MariaDB database they are allowed to wipe on every
@@ -72,6 +80,17 @@ On the local SaaS stack:
 
     docker exec -w /var/www/html/wp-content/themes/libresign \
       wordpress-docker-wordpress-1 composer test
+
+The browser tests in `tests/E2E` cover creating a workspace together with a plan,
+the CPF/CNPJ field and the policy consent at checkout, and the lost password page.
+They need Docker, Node.js and a `composer install`, since the stack mounts
+WooCommerce from `vendor/test-plugins`:
+
+    npm ci
+    npx playwright install chromium
+    npm run env:start    # WordPress on :8889
+    npm run test:e2e
+    npm run env:stop
 
 == Development notes ==
 
