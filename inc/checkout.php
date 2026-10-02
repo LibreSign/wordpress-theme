@@ -55,11 +55,19 @@ function libresign_theme_link_checkout_terms_to_policy( $block_content ) {
 		)
 	);
 
-	return (string) preg_replace(
-		'/<div(?=[^>]*\bwp-block-woocommerce-checkout-terms-block\b)/',
-		'<div data-text="' . esc_attr( $text ) . '"',
-		(string) $block_content,
-		1
-	);
+	$processor = new WP_HTML_Tag_Processor( (string) $block_content );
+
+	if (
+		$processor->next_tag(
+			array(
+				'tag_name'   => 'div',
+				'class_name' => 'wp-block-woocommerce-checkout-terms-block',
+			)
+		)
+	) {
+		$processor->set_attribute( 'data-text', $text );
+	}
+
+	return $processor->get_updated_html();
 }
 add_filter( 'render_block_woocommerce/checkout-terms-block', 'libresign_theme_link_checkout_terms_to_policy' );
