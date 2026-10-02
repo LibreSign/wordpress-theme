@@ -53,8 +53,8 @@ final class AssetsTest extends WP_UnitTestCase {
 	public function test_loads_the_assets_the_site_header_and_footer_use() {
 		$styles = $this->enqueue();
 
-		$this->assertSame( 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css', $styles->registered['bootstrap-css']->src );
-		$this->assertSame( 'https://cdn.lineicons.com/4.0/lineicons.css', $styles->registered['lineicons']->src );
+		$this->assertSame( get_theme_file_uri( 'assets/vendor/bootstrap/bootstrap-grid.min.css' ), $styles->registered['bootstrap-css']->src );
+		$this->assertSame( get_theme_file_uri( 'assets/vendor/lineicons/lineicons.css' ), $styles->registered['lineicons']->src );
 		$this->assertSame( get_theme_file_uri( 'assets/css/header-footer.css' ), $styles->registered['libresign-header-footer']->src );
 		$this->assertContains( 'libresign-header-footer', $styles->queue );
 	}
