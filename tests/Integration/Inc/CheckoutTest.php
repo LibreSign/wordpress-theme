@@ -42,16 +42,25 @@ final class CheckoutTest extends WP_UnitTestCase {
 	/**
 	 * @dataProvider provide_terms_blocks
 	 */
-	public function test_links_the_checkout_terms_to_the_policy( $block_content ) {
-		$this->assertSame(
-			'<div data-text="Read the &lt;a href=&quot;https://libresign.coop/privacy-policy&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;terms and privacy policy&lt;/a&gt;."' . substr( $block_content, 4 ),
-			apply_filters( 'render_block_woocommerce/checkout-terms-block', $block_content )
-		);
+	public function test_links_the_checkout_terms_to_the_policy( $block_content, $expected ) {
+		$this->assertSame( $expected, apply_filters( 'render_block_woocommerce/checkout-terms-block', $block_content ) );
 	}
 
 	public static function provide_terms_blocks() {
-		yield 'as saved'                  => array( '<div class="wp-block-woocommerce-checkout-terms-block"></div>' );
-		yield 'as woocommerce renders it' => array( '<div data-block-name="woocommerce/checkout-terms-block" class="wp-block-woocommerce-checkout-terms-block"></div>' );
+		$policy_text = 'data-text="Read the &lt;a href=&quot;https://libresign.coop/privacy-policy&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;terms and privacy policy&lt;/a&gt;."';
+
+		yield 'as saved' => array(
+			'<div class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
+		yield 'as woocommerce renders it' => array(
+			'<div data-block-name="woocommerce/checkout-terms-block" class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' data-block-name="woocommerce/checkout-terms-block" class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
+		yield 'with a text already set' => array(
+			'<div data-text="By proceeding with your purchase you agree to our Terms and Conditions." class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
 	}
 
 	public function test_leaves_other_markup_alone() {
