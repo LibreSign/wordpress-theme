@@ -19,3 +19,4 @@ require_once __DIR__ . '/inc/registration.php';
 require_once __DIR__ . '/inc/product.php';
 require_once __DIR__ . '/inc/cpf-cnpj.php';
 require_once __DIR__ . '/inc/checkout.php';
+require_once __DIR__ . '/inc/onboarding.php';
