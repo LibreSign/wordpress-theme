@@ -2,3 +2,4 @@
 languages/*.mo
 /vendor/
 /vendor-bin/*/vendor/
+/node_modules/
