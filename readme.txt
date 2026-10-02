@@ -82,7 +82,8 @@ On the local SaaS stack:
       wordpress-docker-wordpress-1 composer test
 
 The browser tests in `tests/E2E` cover creating a workspace together with a plan,
-the CPF/CNPJ field and the policy consent at checkout, and the lost password page.
+the CPF/CNPJ field and the policy consent at checkout, the lost password page,
+and the onboarding on the shop, checkout and order received pages.
 They need Docker, Node.js and a `composer install`, since the stack mounts
 WooCommerce from `vendor/test-plugins`:
 
