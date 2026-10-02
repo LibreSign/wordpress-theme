@@ -67,8 +67,8 @@ test under `tests/E2E` follows the same names. `tests/Unit/StructureTest.php`
 enforces this and also fails on a test whose file no longer exists. In CI, octocov fails the run when line
 coverage is below 90% or below the last report of `main` (`.octocov.yml`).
 
-`composer install` brings in WordPress, the WordPress test suite and WooCommerce,
-so the tests only need a MySQL/MariaDB database they are allowed to wipe on every
+`composer install` brings in WordPress, the WordPress test suite, WooCommerce and
+WooCommerce Subscriptions, so the tests only need a MySQL/MariaDB database they are allowed to wipe on every
 run. The connection comes from `WP_TESTS_DB_NAME` (`wordpress_test`),
 `WP_TESTS_DB_USER` (`root`), `WP_TESTS_DB_PASSWORD` (`root`), `WP_TESTS_DB_HOST`
 (`mariadb`) and `WP_TESTS_TABLE_PREFIX` (`wptests_`).
