@@ -23,8 +23,19 @@ add_action( 'wp_enqueue_scripts', function () {
 }, 20 );
 
 add_action( 'wp_enqueue_scripts', function () {
-	wp_enqueue_style( 'bootstrap-css', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap-grid.min.css', array(), '5.3.0' );
-	wp_enqueue_style( 'lineicons', 'https://cdn.lineicons.com/4.0/lineicons.css', array(), null );
+	$vendor_styles = array(
+		'bootstrap-css' => 'assets/vendor/bootstrap/bootstrap-grid.min.css',
+		'lineicons'     => 'assets/vendor/lineicons/lineicons.css',
+	);
+
+	foreach ( $vendor_styles as $handle => $relative_path ) {
+		wp_enqueue_style(
+			$handle,
+			get_theme_file_uri( $relative_path ),
+			array(),
+			(string) filemtime( get_theme_file_path( $relative_path ) )
+		);
+	}
 } );
 
 add_action( 'wp_enqueue_scripts', function () {
