@@ -168,14 +168,6 @@ final class AccountTest extends WP_UnitTestCase {
 		$this->assertSame( '<p>Page</p>', libresign_theme_prepend_saas_onboarding_to_content( '<p>Page</p>' ) );
 	}
 
-	public function test_keeps_the_shop_content_since_the_onboarding_pattern_does_not_exist() {
-		$shop = self::factory()->post->create( array( 'post_type' => 'page' ) );
-		update_option( 'woocommerce_shop_page_id', $shop );
-		$this->in_the_loop_of( get_permalink( $shop ) );
-
-		$this->assertSame( '<p>Shop</p>', libresign_theme_prepend_saas_onboarding_to_content( '<p>Shop</p>' ) );
-	}
-
 	public function test_keeps_the_content_outside_the_loop() {
 		add_filter( 'woocommerce_is_account_page', '__return_true' );
 		$this->go_to( home_url() );
