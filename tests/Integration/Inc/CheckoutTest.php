@@ -2,34 +2,68 @@
 
 namespace LibreSign\WordPressTheme\Tests\Integration\Inc;
 
+use Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields;
+use Automattic\WooCommerce\Blocks\Package;
 use WP_Error;
 use WP_UnitTestCase;
 
 final class CheckoutTest extends WP_UnitTestCase {
 
-	private function checkout_errors( $data ) {
+	public function test_requires_the_policy_consent_to_place_an_order() {
+		__internal_woocommerce_blocks_deregister_checkout_field( 'libresign/policy-consent' );
+
+		libresign_theme_register_policy_consent_field();
+
+		$field = Package::container()->get( CheckoutFields::class )->get_additional_fields()['libresign/policy-consent'];
+
+		$this->assertSame( 'checkbox', $field['type'] );
+		$this->assertSame( 'order', $field['location'] );
+		$this->assertTrue( $field['required'] );
+		$this->assertSame( 'I agree to the terms and privacy policy before placing the order.', $field['label'] );
+		$this->assertSame( 'You must agree to the policies before completing the purchase.', $field['errorMessage'] );
+	}
+
+	public function test_the_classic_checkout_refuses_an_order_without_the_consent() {
 		$errors = new WP_Error();
-		do_action( 'woocommerce_after_checkout_validation', $data, $errors );
 
-		return $errors;
-	}
-
-	public function test_the_terms_checkbox_links_to_the_policy_in_a_new_tab() {
-		$this->assertSame(
-			'I agree to the <a href="https://libresign.coop/privacy-policy" target="_blank" rel="noopener noreferrer">terms and privacy policy</a> before placing the order.',
-			apply_filters( 'woocommerce_get_terms_and_conditions_checkbox_text', '' )
-		);
-	}
-
-	public function test_refuses_an_order_without_the_policy_consent() {
-		$errors = $this->checkout_errors( array( 'terms' => 0 ) );
+		do_action( 'woocommerce_after_checkout_validation', array( 'terms' => 0 ), $errors );
 
 		$this->assertContains( 'libresign_policy_consent', $errors->get_error_codes() );
 	}
 
-	public function test_accepts_an_order_with_the_policy_consent() {
-		$errors = $this->checkout_errors( array( 'terms' => 1 ) );
+	public function test_the_classic_checkout_accepts_an_order_with_the_consent() {
+		$errors = new WP_Error();
+
+		do_action( 'woocommerce_after_checkout_validation', array( 'terms' => 1 ), $errors );
 
 		$this->assertNotContains( 'libresign_policy_consent', $errors->get_error_codes() );
+	}
+
+	/**
+	 * @dataProvider provide_terms_blocks
+	 */
+	public function test_links_the_checkout_terms_to_the_policy( $block_content, $expected ) {
+		$this->assertSame( $expected, apply_filters( 'render_block_woocommerce/checkout-terms-block', $block_content ) );
+	}
+
+	public static function provide_terms_blocks() {
+		$policy_text = 'data-text="Read the &lt;a href=&quot;https://libresign.coop/privacy-policy&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;terms and privacy policy&lt;/a&gt;."';
+
+		yield 'as saved' => array(
+			'<div class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
+		yield 'as woocommerce renders it' => array(
+			'<div data-block-name="woocommerce/checkout-terms-block" class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' data-block-name="woocommerce/checkout-terms-block" class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
+		yield 'with a text already set' => array(
+			'<div data-text="By proceeding with your purchase you agree to our Terms and Conditions." class="wp-block-woocommerce-checkout-terms-block"></div>',
+			'<div ' . $policy_text . ' class="wp-block-woocommerce-checkout-terms-block"></div>',
+		);
+	}
+
+	public function test_leaves_other_markup_alone() {
+		$this->assertSame( '<div class="wp-block-group"></div>', libresign_theme_link_checkout_terms_to_policy( '<div class="wp-block-group"></div>' ) );
 	}
 }
