@@ -1,23 +1,30 @@
-<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"20px","bottom":"20px"}}},"backgroundColor":"base","layout":{"type":"constrained"}} -->
-<div class="wp-block-group alignwide has-base-background-color has-background"
-	style="padding-top:20px;padding-bottom:20px">
-	<!-- wp:group {"align":"wide","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap"}} -->
-	<div class="wp-block-group alignwide">
-		<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"},"layout":{"selfStretch":"fit","flexSize":null}},"layout":{"type":"flex"}} -->
+<!-- wp:group {"align":"full","className":"wc-blocks-pattern-header-minimal wc-blocks-header-pattern","style":{"spacing":{"padding":{"right":"0","left":"0","top":"1rem","bottom":"1rem"},"margin":{"top":"0px","bottom":"0px"}},"position":{"type":""}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"center"}} -->
+<div class="wp-block-group alignfull wc-blocks-pattern-header-minimal wc-blocks-header-pattern" id="header" style="margin-top:0px;margin-bottom:0px;padding-top:1rem;padding-right:0;padding-bottom:1rem;padding-left:0">
+	<!-- wp:group {"className":"container","style":{"layout":{"selfStretch":"fill","flexSize":null}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+	<div class="wp-block-group container">
+		<!-- wp:group {"style":{"spacing":{"blockGap":"20px"}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
 		<div class="wp-block-group">
-			<!-- wp:site-logo {"width":60} /-->
-
-			<!-- wp:group {"style":{"spacing":{"blockGap":"0px"}}} -->
-			<div class="wp-block-group">
-				<!-- wp:site-title {"level":0} /-->
-			</div>
-			<!-- /wp:group -->
+			<!-- wp:site-logo {"shouldSyncIcon":false,"className":"is-style-default","style":{"layout":{"selfStretch":"fixed","flexSize":"100px"}}} /-->
 		</div>
 		<!-- /wp:group -->
 
-		<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"left"}} -->
+		<!-- wp:group {"style":{"spacing":{"blockGap":"8px"},"layout":{"selfStretch":"fill","flexSize":null}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"right"}} -->
 		<div class="wp-block-group">
-			<!-- wp:navigation {"layout":{"type":"flex","justifyContent":"right","orientation":"horizontal"},"style":{"spacing":{"margin":{"top":"0"},"blockGap":"var:preset|spacing|20"},"layout":{"selfStretch":"fit","flexSize":null}},"metadata":{"ignoredHookedBlocks":["woocommerce/customer-account","woocommerce/mini-cart"]}} /--><!-- wp:woocommerce/customer-account {"displayStyle":"icon_only","iconStyle":"line","style":{"spacing":{"margin":{"left":"0.5em"}}}} /--><!-- wp:woocommerce/mini-cart /-->
+			<!-- wp:navigation {"icon":"menu","metadata":{"ignoredHookedBlocks":["woocommerce/mini-cart"]},"style":{"layout":{"selfStretch":"fit","flexSize":null},"spacing":{"blockGap":"var:preset|spacing|10"}},"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"nowrap"}} -->
+				<!-- wp:navigation-link {"label":"Home","rel":"noopener noreferrer","url":"https://libresign.coop/","kind":"custom"} /-->
+
+				<!-- wp:navigation-link {"label":"Features","rel":"noopener noreferrer","url":"https://libresign.coop/#features","kind":"custom"} /-->
+
+				<!-- wp:navigation-link {"label":"About","rel":"noopener noreferrer","url":"https://libresign.coop/#about","kind":"custom"} /-->
+
+				<!-- wp:navigation-link {"label":"Pricing","rel":"noopener noreferrer","url":"https://libresign.coop/pricing/","kind":"custom"} /-->
+
+				<!-- wp:navigation-link {"label":"Contact","rel":"noopener noreferrer","url":"https://libresign.coop/#contact","kind":"custom"} /-->
+
+				<!-- wp:navigation-link {"label":"Posts","rel":"noopener noreferrer","url":"https://libresign.coop/posts/","kind":"custom"} /-->
+			<!-- /wp:navigation -->
+
+			<!-- wp:woocommerce/customer-account {"displayStyle":"text_only","iconStyle":"line","iconClass":"wc-block-customer-account__account-icon","style":{"spacing":{"padding":{"right":"0","left":"0"}}}} /-->
 		</div>
 		<!-- /wp:group -->
 	</div>
