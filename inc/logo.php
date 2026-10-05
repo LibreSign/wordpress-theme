@@ -14,7 +14,11 @@
  * @package libresign
  */
 
+use LibreSign\WordPressTheme\Logo;
+
 defined( 'ABSPATH' ) || exit;
+
+require_once dirname( __DIR__ ) . '/src/Logo.php';
 
 /**
  * Return the LibreSign logo URL for the given display context.
@@ -41,31 +45,7 @@ function libresign_theme_get_theme_logo_url( string $variant = 'light' ): string
  * device pixel ratio.
  */
 function libresign_theme_custom_logo_needs_fallback( $custom_logo_html ) {
-	if ( '' === trim( (string) $custom_logo_html ) ) {
-		return true;
-	}
-
-	if ( ! preg_match( '/<img[^>]+>/', (string) $custom_logo_html, $tag_matches ) ) {
-		return true;
-	}
-
-	$img_tag = $tag_matches[0];
-
-	// Collect every image URL from src and srcset.
-	$urls = array();
-
-	if ( preg_match( '/src=["\']([^"\']+)["\']/', $img_tag, $m ) ) {
-		$urls[] = html_entity_decode( $m[1] );
-	}
-
-	if ( preg_match( '/srcset=["\']([^"\']+)["\']/', $img_tag, $m ) ) {
-		foreach ( explode( ',', html_entity_decode( $m[1] ) ) as $part ) {
-			$candidate = trim( explode( ' ', trim( $part ) )[0] );
-			if ( $candidate ) {
-				$urls[] = $candidate;
-			}
-		}
-	}
+	$urls = Logo::image_urls( (string) $custom_logo_html );
 
 	if ( empty( $urls ) ) {
 		return true;
@@ -117,29 +97,10 @@ function libresign_theme_filter_custom_logo( $custom_logo_html, $blog_id ) {
 		return $custom_logo_html;
 	}
 
-	$logo_light = esc_url( libresign_theme_get_theme_logo_url( 'light' ) );
-	$logo_dark  = esc_url( libresign_theme_get_theme_logo_url( 'dark' ) );
-
-	// Remove srcset/sizes and set src to the light-background logo.
-	$patched = preg_replace( '/\ssrcset=["\'][^"\']*["\']/', '', $custom_logo_html );
-	$patched = preg_replace( '/\ssizes=["\'][^"\']*["\']/', '', $patched );
-	$patched = preg_replace(
-		'/(<img[^>]+)src=["\'][^"\']*["\']/',
-		'$1src="' . $logo_light . '"',
-		$patched
+	return Logo::with_fallback(
+		(string) $custom_logo_html,
+		esc_url( libresign_theme_get_theme_logo_url( 'light' ) ),
+		esc_url( libresign_theme_get_theme_logo_url( 'dark' ) )
 	);
-
-	// Wrap <img> in <picture> for automatic dark/light switching.
-	$patched = preg_replace(
-		'/(<img[^>]+>)/',
-		'<picture>'
-			. '<source media="(prefers-color-scheme: dark)" srcset="' . $logo_dark . '">' 
-			. '<source media="(prefers-color-scheme: light)" srcset="' . $logo_light . '">'
-			. '$1'
-			. '</picture>',
-		$patched
-	);
-
-	return $patched ?: $custom_logo_html;
 }
 add_filter( 'get_custom_logo', 'libresign_theme_filter_custom_logo', 10, 2 );

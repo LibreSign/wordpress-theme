@@ -56,7 +56,22 @@ Every check is a Composer script:
 - `composer lint`: php -l on every file
 - `composer cs`: PHPCS
 - `composer stan`: PHPStan
+- `composer test`: PHPUnit
 - `composer ci`: all of the above, in this order
+
+`composer install` brings in WordPress, the WordPress test suite and WooCommerce,
+so the tests only need a MySQL/MariaDB database they are allowed to wipe on every
+run. The connection comes from `WP_TESTS_DB_NAME` (`wordpress_test`),
+`WP_TESTS_DB_USER` (`root`), `WP_TESTS_DB_PASSWORD` (`root`), `WP_TESTS_DB_HOST`
+(`mariadb`) and `WP_TESTS_TABLE_PREFIX` (`wptests_`).
+
+On the local SaaS stack:
+
+    docker exec wordpress-docker-mariadb-1 \
+      mariadb -uroot -proot -e 'CREATE DATABASE IF NOT EXISTS wordpress_test;'
+
+    docker exec -w /var/www/html/wp-content/themes/libresign \
+      wordpress-docker-wordpress-1 composer test
 
 == Development notes ==
 

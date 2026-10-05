@@ -3,7 +3,13 @@
  * GitHub webhook receiver for production site fragment synchronization.
  */
 
+use LibreSign\WordPressTheme\SiteDeploy;
+use LibreSign\WordPressTheme\SiteFragment;
+
 defined( 'ABSPATH' ) || exit;
+
+require_once dirname( __DIR__ ) . '/src/SiteDeploy.php';
+require_once dirname( __DIR__ ) . '/src/SiteFragment.php';
 
 const LIBRESIGN_THEME_GITHUB_SITE_WEBHOOK_NAMESPACE = 'libresign/v1';
 const LIBRESIGN_THEME_GITHUB_SITE_WEBHOOK_ROUTE     = '/site-deploy-webhook';
@@ -199,7 +205,7 @@ function libresign_theme_site_origin() {
 	);
 
 	foreach ( $values as $value ) {
-		$value = libresign_theme_site_fragment_normalize_site_origin( $value );
+		$value = SiteFragment::origin( $value );
 		if ( '' !== $value ) {
 			return $value;
 		}
@@ -226,7 +232,7 @@ function libresign_theme_site_deploy_workflow_name() {
 		}
 	}
 
-	return 'Deploy';
+	return 'pages build and deployment';
 }
 
 /**
@@ -283,92 +289,6 @@ function libresign_theme_github_site_webhook_ignored_response( $data = array(), 
 	$response->set_status( $status );
 
 	return $response;
-}
-
-/**
- * Verify the GitHub webhook HMAC signature.
- *
- * @param string $body      Raw request body.
- * @param string $signature Signature header value.
- * @param string $secret    Shared secret.
- * @return bool
- */
-function libresign_theme_verify_github_webhook_signature( $body, $signature, $secret ) {
-	$secret    = trim( (string) $secret );
-	$signature = trim( (string) $signature );
-
-	if ( '' === $body || '' === $secret || '' === $signature ) {
-		return false;
-	}
-
-	if ( 0 === stripos( $signature, 'sha256=' ) ) {
-		$signature = substr( $signature, 7 );
-	}
-
-	if ( ! ctype_xdigit( $signature ) ) {
-		return false;
-	}
-
-	$expected = hash_hmac( 'sha256', $body, $secret );
-
-	return hash_equals( $expected, strtolower( $signature ) );
-}
-
-/**
- * Check whether the webhook user agent looks like GitHub Hookshot.
- *
- * @param string $user_agent User agent header.
- * @return bool
- */
-function libresign_theme_is_github_hookshot_user_agent( $user_agent ) {
-	return 0 === strpos( trim( (string) $user_agent ), 'GitHub-Hookshot/' );
-}
-
-/**
- * Extract the workflow name from the payload.
- *
- * @param array<string, mixed> $payload Parsed payload.
- * @return string
- */
-function libresign_theme_site_deploy_workflow_name_from_payload( $payload ) {
-	$workflow_run_name = isset( $payload['workflow_run']['name'] ) ? trim( (string) $payload['workflow_run']['name'] ) : '';
-	if ( '' !== $workflow_run_name ) {
-		return $workflow_run_name;
-	}
-
-	return isset( $payload['workflow']['name'] ) ? trim( (string) $payload['workflow']['name'] ) : '';
-}
-
-/**
- * Determine whether the payload represents the production site deploy event.
- *
- * @param array<string, mixed> $payload Parsed payload.
- * @return bool
- */
-function libresign_theme_is_production_site_deploy_workflow_run( $payload ) {
-	$repository    = isset( $payload['repository']['full_name'] ) ? trim( (string) $payload['repository']['full_name'] ) : '';
-	$action        = isset( $payload['action'] ) ? trim( (string) $payload['action'] ) : '';
-	$conclusion    = isset( $payload['workflow_run']['conclusion'] ) ? trim( (string) $payload['workflow_run']['conclusion'] ) : '';
-	$head_branch   = isset( $payload['workflow_run']['head_branch'] ) ? trim( (string) $payload['workflow_run']['head_branch'] ) : '';
-	$workflow_name = libresign_theme_site_deploy_workflow_name_from_payload( $payload );
-
-	if ( libresign_theme_site_deploy_repository_name() !== $repository ) {
-		return false;
-	}
-
-	if ( 'completed' !== $action ) {
-		return false;
-	}
-
-	if ( 'success' !== $conclusion ) {
-		return false;
-	}
-
-	if ( libresign_theme_site_deploy_branch_name() !== $head_branch ) {
-		return false;
-	}
-
-	return libresign_theme_site_deploy_workflow_name() === $workflow_name;
 }
 
 /**
@@ -429,7 +349,7 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 	}
 
 	$user_agent = (string) $request->get_header( 'user-agent' );
-	if ( ! libresign_theme_is_github_hookshot_user_agent( $user_agent ) ) {
+	if ( ! SiteDeploy::is_github_delivery( $user_agent ) ) {
 		return new WP_Error(
 			'libresign_theme_github_webhook_invalid_agent',
 			__( 'The webhook request does not look like a GitHub delivery.', 'libresign' ),
@@ -439,7 +359,7 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 
 	$body      = (string) $request->get_body();
 	$signature = (string) $request->get_header( 'x-hub-signature-256' );
-	if ( ! libresign_theme_verify_github_webhook_signature( $body, $signature, $secret ) ) {
+	if ( ! SiteDeploy::signature_matches( $body, $signature, $secret ) ) {
 		return new WP_Error(
 			'libresign_theme_github_webhook_invalid_signature',
 			__( 'Invalid GitHub webhook signature.', 'libresign' ),
@@ -476,7 +396,7 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 	}
 
 	// Deploy workflow started: post "starting" comment on the PR.
-	if ( libresign_theme_is_site_deploy_starting( $payload ) ) {
+	if ( SiteDeploy::is_deploy_starting( $payload, libresign_theme_site_deploy_repository_name() ) ) {
 		$delivery_id = (string) $request->get_header( 'x-github-delivery' );
 		if ( ! libresign_theme_mark_github_delivery_once( $delivery_id ) ) {
 			return libresign_theme_github_site_webhook_ignored_response(
@@ -487,12 +407,18 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 		return rest_ensure_response( array( 'status' => 'acknowledged', 'action' => 'deploy_starting' ) );
 	}
 
-	if ( ! libresign_theme_is_production_site_deploy_workflow_run( $payload ) ) {
+	$is_production_deploy = SiteDeploy::is_production_deploy(
+		$payload,
+		libresign_theme_site_deploy_repository_name(),
+		libresign_theme_site_deploy_branch_name(),
+		libresign_theme_site_deploy_workflow_name()
+	);
+	if ( ! $is_production_deploy ) {
 		return libresign_theme_github_site_webhook_ignored_response(
 			array(
 				'reason'        => 'not_production_deploy',
 				'repository'    => isset( $payload['repository']['full_name'] ) ? (string) $payload['repository']['full_name'] : '',
-				'workflow_name' => libresign_theme_site_deploy_workflow_name_from_payload( $payload ),
+				'workflow_name' => SiteDeploy::workflow_name( $payload ),
 				'head_branch'   => isset( $payload['workflow_run']['head_branch'] ) ? (string) $payload['workflow_run']['head_branch'] : '',
 				'conclusion'    => isset( $payload['workflow_run']['conclusion'] ) ? (string) $payload['workflow_run']['conclusion'] : '',
 			)
@@ -537,7 +463,7 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 		array(
 			'delivery_id' => $delivery_id,
 			'repository'  => libresign_theme_site_deploy_repository_name(),
-			'workflow'    => libresign_theme_site_deploy_workflow_name_from_payload( $payload ),
+			'workflow'    => SiteDeploy::workflow_name( $payload ),
 			'head_branch' => isset( $workflow_run['head_branch'] ) ? (string) $workflow_run['head_branch'] : '',
 			'source_sha'  => isset( $workflow_run['head_sha'] ) ? (string) $workflow_run['head_sha'] : '',
 			'source_url'  => isset( $workflow_run['html_url'] ) ? (string) $workflow_run['html_url'] : '',
@@ -552,7 +478,7 @@ function libresign_theme_receive_github_site_deploy_webhook( $request ) {
 			'status'      => 'synced',
 			'delivery_id' => $delivery_id,
 			'repository'  => libresign_theme_site_deploy_repository_name(),
-			'workflow'    => libresign_theme_site_deploy_workflow_name_from_payload( $payload ),
+			'workflow'    => SiteDeploy::workflow_name( $payload ),
 			'origin'      => $sync_result['origin'],
 			'synced'      => $sync_result['synced'],
 		)
@@ -612,16 +538,7 @@ function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_
 		return;
 	}
 
-	$synced      = $sync_result['synced'] ?? array();
-	$header_list = implode( ', ', (array) ( $synced['header'] ?? array() ) );
-	$footer_list = implode( ', ', (array) ( $synced['footer'] ?? array() ) );
-
-	$body = "✅ **Header and footer fragments updated in production!**\n\n" .
-			"| Fragment | Synced locales |\n" .
-			"|----------|----------------|\n" .
-			"| Header | `{$header_list}` |\n" .
-			"| Footer | `{$footer_list}` |\n\n" .
-			"Source: {$site_origin}";
+	$body = SiteDeploy::sync_comment( $sync_result['synced'] ?? array(), $site_origin );
 
 	$parts = explode( '/', $repository, 2 );
 	if ( count( $parts ) !== 2 || '' === $parts[0] || '' === $parts[1] ) {
@@ -641,24 +558,6 @@ function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_
 			'timeout' => 15,
 		)
 	);
-}
-
-/**
- * Determine whether the payload represents the Deploy workflow starting on main.
- *
- * @param array<string, mixed> $payload Parsed payload.
- * @return bool
- */
-function libresign_theme_is_site_deploy_starting( array $payload ): bool {
-	$repository  = isset( $payload['repository']['full_name'] ) ? trim( (string) $payload['repository']['full_name'] ) : '';
-	$action      = isset( $payload['action'] ) ? trim( (string) $payload['action'] ) : '';
-	$head_branch = isset( $payload['workflow_run']['head_branch'] ) ? trim( (string) $payload['workflow_run']['head_branch'] ) : '';
-	$wf_name     = libresign_theme_site_deploy_workflow_name_from_payload( $payload );
-
-	return libresign_theme_site_deploy_repository_name() === $repository
-		&& 'in_progress' === $action
-		&& 'main' === $head_branch
-		&& 'Deploy' === $wf_name;
 }
 
 /**
@@ -731,16 +630,5 @@ function libresign_theme_find_pr_for_commit( string $repository, string $sha, st
 		return 0;
 	}
 
-	$pulls = json_decode( wp_remote_retrieve_body( $response ), true );
-	if ( ! is_array( $pulls ) ) {
-		return 0;
-	}
-
-	foreach ( $pulls as $pr ) {
-		if ( ! empty( $pr['merged_at'] ) ) {
-			return (int) $pr['number'];
-		}
-	}
-
-	return 0;
+	return SiteDeploy::merged_pull_request( json_decode( wp_remote_retrieve_body( $response ), true ) );
 }
