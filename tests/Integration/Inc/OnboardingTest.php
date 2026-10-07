@@ -21,6 +21,7 @@ final class OnboardingTest extends WP_UnitTestCase {
 	public function tear_down() {
 		unset( $GLOBALS['wp']->query_vars['order-pay'], $GLOBALS['wp']->query_vars['order-received'] );
 		set_query_var( 'order-received', '' );
+		$this->store->empty_cart();
 
 		parent::tear_down();
 	}
@@ -56,6 +57,28 @@ final class OnboardingTest extends WP_UnitTestCase {
 		yield 'a renewal'     => array( 'renewal' );
 		yield 'a switch'      => array( 'switch' );
 		yield 'a resubscribe' => array( 'resubscribe' );
+	}
+
+	/**
+	 * @dataProvider provide_carts_of_existing_subscriptions
+	 */
+	public function test_hides_the_onboarding_when_the_cart_continues_an_existing_subscription( $cart_item_key ) {
+		wc_load_cart();
+		WC()->cart->add_to_cart(
+			$this->store->plan()->get_id(),
+			1,
+			0,
+			array(),
+			array( $cart_item_key => array( 'subscription_id' => $this->subscription()->get_id() ) )
+		);
+
+		$this->assertSame( '', trim( $this->onboarding() ) );
+	}
+
+	public static function provide_carts_of_existing_subscriptions() {
+		yield 'a renewal'     => array( 'subscription_renewal' );
+		yield 'a resubscribe' => array( 'subscription_resubscribe' );
+		yield 'a switch'      => array( 'subscription_switch' );
 	}
 
 	public function test_keeps_other_groups_while_hiding_the_onboarding() {

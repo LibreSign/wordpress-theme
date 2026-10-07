@@ -17,6 +17,8 @@ parameters:
         - vendor-bin/phpunit/vendor/autoload.php
     scanFiles:
         - vendor/test-plugins/woocommerce-subscriptions/includes/core/wcs-functions.php
+        - vendor/test-plugins/woocommerce-subscriptions/includes/core/wcs-resubscribe-functions.php
+        - vendor/test-plugins/woocommerce-subscriptions/includes/core/wcs-switch-functions.php
         - vendor/test-plugins/woocommerce-subscriptions/includes/core/abstracts/abstract-wcs-related-order-store.php
     scanDirectories:
         - vendor/wp-phpunit/wp-phpunit/includes
