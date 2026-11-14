@@ -25,6 +25,9 @@ final class SiteFragmentTest extends TestCase {
 		yield 'surrounding whitespace'       => array( ' nb_NO ', 'nb-NO', 'nb-NO' );
 		yield 'only separators'              => array( '-_', '', 'default' );
 		yield 'empty'                        => array( '', '', 'default' );
+		yield 'a path'                       => array( '../../themes/libresign/parts', '', 'default' );
+		yield 'a line break'                 => array( "pt-BR`\n@someone", '', 'default' );
+		yield 'a subtag too long'            => array( 'en-abcdefghi', '', 'default' );
 	}
 
 	/**
@@ -46,12 +49,40 @@ final class SiteFragmentTest extends TestCase {
 				'css' => 'https://libresign.coop/header.css',
 				'js'  => 'https://libresign.coop/header.js',
 			),
-			SiteFragment::asset_urls( "<header data-fragment-css='https://libresign.coop/header.css' data-fragment-js=\"https://libresign.coop/header.js\"></header>" )
+			SiteFragment::asset_urls( "<header data-fragment-css='https://libresign.coop/header.css' data-fragment-js=\"/header.js\"></header>", 'https://libresign.coop/' )
 		);
 	}
 
 	public function test_a_fragment_without_both_asset_urls_has_none() {
-		$this->assertNull( SiteFragment::asset_urls( '<header data-fragment-css="/header.css"></header>' ) );
+		$this->assertNull( SiteFragment::asset_urls( '<header data-fragment-css="/header.css"></header>', 'https://libresign.coop' ) );
+	}
+
+	public function test_a_fragment_with_an_asset_from_another_site_has_none() {
+		$this->assertNull( SiteFragment::asset_urls( '<header data-fragment-css="/header.css" data-fragment-js="http://169.254.169.254/latest/"></header>', 'https://libresign.coop' ) );
+	}
+
+	/**
+	 * @dataProvider provide_asset_urls
+	 */
+	public function test_accepts_only_urls_of_the_static_site( $url, $expected ) {
+		$this->assertSame( $expected, SiteFragment::same_origin_url( 'https://libresign.coop', $url ) );
+	}
+
+	public static function provide_asset_urls() {
+		yield 'an absolute url'               => array( 'https://libresign.coop/assets/header.css', 'https://libresign.coop/assets/header.css' );
+		yield 'a root relative url'           => array( '/assets/header.css', 'https://libresign.coop/assets/header.css' );
+		yield 'the host in upper case'        => array( 'https://LIBRESIGN.coop/a.css', 'https://LIBRESIGN.coop/a.css' );
+		yield 'another host'                  => array( 'https://example.com/a.css', '' );
+		yield 'an internal host'              => array( 'http://mailpit:8025/api/v1/messages', '' );
+		yield 'another scheme'                => array( 'http://libresign.coop/a.css', '' );
+		yield 'another port'                  => array( 'https://libresign.coop:8443/a.css', '' );
+		yield 'a protocol relative url'       => array( '//example.com/a.css', '' );
+		yield 'a host after credentials'      => array( 'https://libresign.coop@example.com/a.css', '' );
+		yield 'a path relative url'           => array( 'a.css', '' );
+	}
+
+	public function test_an_asset_url_needs_an_origin() {
+		$this->assertSame( '', SiteFragment::same_origin_url( '', '/a.css' ) );
 	}
 
 	public function test_reads_the_locales_the_header_links_to() {
@@ -60,6 +91,13 @@ final class SiteFragmentTest extends TestCase {
 			SiteFragment::linked_locales(
 				'<a href="/fragments/pt_BR/header">pt</a><a href="https://libresign.coop/fragments/fr/header#top">fr</a><a href="/fragments/header?x=1">en</a><a href="/fragments/footer">footer</a>'
 			)
+		);
+	}
+
+	public function test_a_header_link_that_leaves_the_fragments_folder_is_not_a_locale() {
+		$this->assertSame(
+			array( '' ),
+			SiteFragment::linked_locales( '<a href="/fragments/..%2F..%2Fthemes%2Flibresign%2Fparts/header">x</a>' )
 		);
 	}
 

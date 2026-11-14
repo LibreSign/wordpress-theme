@@ -32,6 +32,22 @@ final class SiteDeployTest extends TestCase {
 	}
 
 	/**
+	 * @dataProvider provide_repository_names
+	 */
+	public function test_recognizes_a_repository_name( $repository, $expected ) {
+		$this->assertSame( $expected, SiteDeploy::is_repository_name( $repository ) );
+	}
+
+	public static function provide_repository_names() {
+		yield 'an owner and a name'          => array( 'LibreSign/site', true );
+		yield 'dots, dashes and underscores' => array( 'Libre-Sign/site_v2.0', true );
+		yield 'no owner'                     => array( 'site', false );
+		yield 'more segments'                => array( 'LibreSign/site/commits/abc/comments', false );
+		yield 'a query'                      => array( 'LibreSign/site?x=', false );
+		yield 'empty'                        => array( '', false );
+	}
+
+	/**
 	 * @dataProvider provide_user_agents
 	 */
 	public function test_recognizes_the_github_user_agent( $user_agent, $expected ) {

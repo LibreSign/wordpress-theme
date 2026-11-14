@@ -177,8 +177,8 @@ add_action( 'rest_api_init', 'libresign_theme_register_github_site_webhook_route
  */
 function libresign_theme_github_webhook_secret() {
 	$values = array(
-		get_theme_mod( 'libresign_github_webhook_secret' ),
 		getenv( 'LIBRESIGN_GITHUB_WEBHOOK_SECRET' ),
+		get_theme_mod( 'libresign_github_webhook_secret' ),
 		get_theme_mod( 'libresign_footer_webhook_secret' ),
 		getenv( 'LIBRESIGN_FOOTER_WEBHOOK_SECRET' ),
 	);
@@ -531,7 +531,10 @@ function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_
 	}
 
 	$pr_number  = (int) $info['pr_number'];
-	$repository = isset( $info['repository'] ) ? (string) $info['repository'] : libresign_theme_site_deploy_repository_name();
+	$repository = libresign_theme_site_deploy_repository_name();
+	if ( ! SiteDeploy::is_repository_name( $repository ) ) {
+		return;
+	}
 
 	$token = libresign_theme_github_deploy_token();
 	if ( '' === $token ) {
@@ -540,13 +543,8 @@ function libresign_theme_post_pr_sync_comment( string $site_origin, array $sync_
 
 	$body = SiteDeploy::sync_comment( $sync_result['synced'] ?? array(), $site_origin );
 
-	$parts = explode( '/', $repository, 2 );
-	if ( count( $parts ) !== 2 || '' === $parts[0] || '' === $parts[1] ) {
-		return;
-	}
-
 	wp_remote_post(
-		"https://api.github.com/repos/{$parts[0]}/{$parts[1]}/issues/{$pr_number}/comments",
+		"https://api.github.com/repos/{$repository}/issues/{$pr_number}/comments",
 		array(
 			'headers' => array(
 				'Authorization'        => 'Bearer ' . $token,

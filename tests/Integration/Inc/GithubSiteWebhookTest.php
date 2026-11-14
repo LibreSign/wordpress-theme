@@ -76,10 +76,10 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 		yield 'a javascript url'         => array( 'javascript:alert(1)', 'https://libresign.coop' );
 	}
 
-	public function test_the_secret_comes_from_the_theme_setting_first() {
+	public function test_the_secret_comes_from_the_environment_first() {
 		putenv( 'LIBRESIGN_GITHUB_WEBHOOK_SECRET=from-environment' );
 
-		$this->assertSame( self::SECRET, libresign_theme_github_webhook_secret() );
+		$this->assertSame( 'from-environment', libresign_theme_github_webhook_secret() );
 	}
 
 	/**
@@ -99,6 +99,7 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 
 	public static function provide_secret_sources() {
 		yield 'the environment'                => array( array(), array( 'LIBRESIGN_GITHUB_WEBHOOK_SECRET' => ' env ' ), 'env' );
+		yield 'the theme setting'              => array( array( 'libresign_github_webhook_secret' => 'theme' ), array( 'LIBRESIGN_FOOTER_WEBHOOK_SECRET' => 'footer-env' ), 'theme' );
 		yield 'the old footer setting'         => array( array( 'libresign_footer_webhook_secret' => 'footer' ), array(), 'footer' );
 		yield 'the old footer environment'     => array( array(), array( 'LIBRESIGN_FOOTER_WEBHOOK_SECRET' => 'footer-env' ), 'footer-env' );
 		yield 'nothing configured'             => array( array(), array(), '' );
@@ -280,6 +281,27 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 		);
 	}
 
+	public function test_comments_on_the_configured_repository_whatever_the_deployment_info_says() {
+		$this->publish_site();
+		$this->site->serve( '/_deployment-info.json', '{"pr_number":42,"repository":"another-org/another-repo/commits/abc/comments?x="}' );
+		update_option( 'libresign_github_deploy_token', $this->encrypted( 'ghp_token' ) );
+
+		$this->deliver( 'workflow_run', $this->production_deploy() );
+
+		$this->assertSame( array( '/repos/LibreSign/site/issues/42/comments' ), $this->github->paths() );
+	}
+
+	public function test_does_not_comment_when_the_configured_repository_is_not_an_owner_and_a_name() {
+		set_theme_mod( 'libresign_site_deploy_repository_name', 'LibreSign/site/commits/abc' );
+		$this->publish_site();
+		$this->site->serve( '/_deployment-info.json', '{"pr_number":42}' );
+		update_option( 'libresign_github_deploy_token', $this->encrypted( 'ghp_token' ) );
+
+		$this->deliver( 'workflow_run', $this->production_deploy( array( 'repository' => array( 'full_name' => 'LibreSign/site/commits/abc' ) ) ) );
+
+		$this->assertSame( array(), $this->github->requests() );
+	}
+
 	/**
 	 * @dataProvider provide_deployments_without_comment
 	 */
@@ -300,7 +322,6 @@ final class GithubSiteWebhookTest extends WP_UnitTestCase {
 	public static function provide_deployments_without_comment() {
 		yield 'no deployment info'             => array( null, 'ghp_token' );
 		yield 'a deployment without a pr'      => array( '{"repository":"LibreSign/site"}', 'ghp_token' );
-		yield 'a repository without an owner'  => array( '{"pr_number":42,"repository":"site"}', 'ghp_token' );
 		yield 'no token'                       => array( '{"pr_number":42}', null );
 	}
 

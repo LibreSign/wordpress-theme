@@ -63,7 +63,10 @@ function libresign_theme_site_fragment_storage_base_url( $fragment_type ) {
  * @return array<string, mixed>|WP_Error
  */
 function libresign_theme_site_fragment_fetch_url( $url ) {
-	$response = wp_remote_get(
+	add_filter( 'http_request_host_is_external', 'libresign_theme_site_fragment_allow_origin_host', 10, 2 );
+	add_filter( 'http_allowed_safe_ports', 'libresign_theme_site_fragment_allow_origin_port', 10, 2 );
+
+	$response = wp_safe_remote_get(
 		$url,
 		array(
 			'timeout'     => 15,
@@ -73,6 +76,9 @@ function libresign_theme_site_fragment_fetch_url( $url ) {
 			),
 		)
 	);
+
+	remove_filter( 'http_request_host_is_external', 'libresign_theme_site_fragment_allow_origin_host', 10 );
+	remove_filter( 'http_allowed_safe_ports', 'libresign_theme_site_fragment_allow_origin_port', 10 );
 
 	if ( is_wp_error( $response ) ) {
 		return $response;
@@ -101,6 +107,22 @@ function libresign_theme_site_fragment_fetch_url( $url ) {
 		'code' => $code,
 		'body' => $body,
 	);
+}
+
+function libresign_theme_site_fragment_allow_origin_host( $is_external, $host ) {
+	$origin_host = (string) wp_parse_url( libresign_theme_site_origin(), PHP_URL_HOST );
+
+	return $is_external || ( '' !== $origin_host && strtolower( $origin_host ) === strtolower( (string) $host ) );
+}
+
+function libresign_theme_site_fragment_allow_origin_port( $allowed_ports, $host ) {
+	$origin = wp_parse_url( libresign_theme_site_origin() );
+
+	if ( is_array( $origin ) && isset( $origin['host'], $origin['port'] ) && strtolower( $origin['host'] ) === strtolower( (string) $host ) ) {
+		$allowed_ports[] = (int) $origin['port'];
+	}
+
+	return $allowed_ports;
 }
 
 /**
@@ -198,7 +220,7 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
 				return $fragment_response;
 			}
 
-			$asset_urls = SiteFragment::asset_urls( (string) $fragment_response['body'] );
+			$asset_urls = SiteFragment::asset_urls( (string) $fragment_response['body'], $site_origin );
 			if ( null === $asset_urls ) {
 				if ( '' !== $locale ) {
 					continue;
@@ -266,37 +288,40 @@ function libresign_theme_site_fragment_collect_artifacts( $site_origin, $fragmen
  * @return array<string, mixed>|WP_Error
  */
 function libresign_theme_site_fragment_persist_artifacts( $collected ) {
+	$staging_dirs = array();
 	foreach ( libresign_theme_site_fragment_supported_types() as $fragment_type ) {
-		$base_dir = libresign_theme_site_fragment_storage_base_dir( $fragment_type );
-		if ( is_dir( $base_dir ) ) {
-			libresign_theme_site_fragment_recursive_delete( $base_dir );
+		$staging_dir = libresign_theme_site_fragment_storage_base_dir( $fragment_type ) . '-staging';
+		libresign_theme_site_fragment_recursive_delete( $staging_dir );
+
+		if ( ! wp_mkdir_p( $staging_dir ) ) {
+			libresign_theme_site_fragment_discard_staging( $staging_dirs );
+
+			return libresign_theme_site_fragment_storage_error( $fragment_type );
 		}
+
+		$staging_dirs[ $fragment_type ] = $staging_dir;
 	}
 
 	foreach ( $collected['artifacts'] as $artifact ) {
 		$fragment_type = (string) $artifact['fragment_type'];
-		$base_dir      = trailingslashit( libresign_theme_site_fragment_storage_base_dir( $fragment_type ) ) . $artifact['locale_key'];
+		$base_dir      = trailingslashit( $staging_dirs[ $fragment_type ] ) . $artifact['locale_key'];
 		$base_url      = trailingslashit( libresign_theme_site_fragment_storage_base_url( $fragment_type ) ) . $artifact['locale_key'];
 		$prefix        = 'header' === $fragment_type ? 'header' : 'footer';
 
-		if ( ! wp_mkdir_p( $base_dir ) ) {
-			return new WP_Error(
-				'libresign_theme_site_fragment_storage_failed',
-				sprintf(
-					/* translators: %s: fragment type. */
-					__( 'Unable to create local storage for the %s fragment.', 'libresign' ),
-					$fragment_type
-				)
-			);
+		$resolved_dir = wp_mkdir_p( $base_dir ) ? realpath( $base_dir ) : false;
+		if ( false === $resolved_dir || dirname( $resolved_dir ) !== realpath( $staging_dirs[ $fragment_type ] ) ) {
+			libresign_theme_site_fragment_discard_staging( $staging_dirs );
+
+			return libresign_theme_site_fragment_storage_error( $fragment_type );
 		}
 
 		$html_file = $prefix . '.html';
 		$css_file  = $prefix . '.css';
 		$js_file   = $prefix . '.js';
 
-		file_put_contents( trailingslashit( $base_dir ) . $html_file, (string) $artifact['html'] );
-		file_put_contents( trailingslashit( $base_dir ) . $css_file, (string) $artifact['css'] );
-		file_put_contents( trailingslashit( $base_dir ) . $js_file, (string) $artifact['js'] );
+		file_put_contents( trailingslashit( $resolved_dir ) . $html_file, (string) $artifact['html'] );
+		file_put_contents( trailingslashit( $resolved_dir ) . $css_file, (string) $artifact['css'] );
+		file_put_contents( trailingslashit( $resolved_dir ) . $js_file, (string) $artifact['js'] );
 
 		$manifest = array(
 			'fragment_type' => $fragment_type,
@@ -316,12 +341,35 @@ function libresign_theme_site_fragment_persist_artifacts( $collected ) {
 		);
 
 		file_put_contents(
-			trailingslashit( $base_dir ) . 'manifest.json',
+			trailingslashit( $resolved_dir ) . 'manifest.json',
 			wp_json_encode( $manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
 		);
 	}
 
+	foreach ( $staging_dirs as $fragment_type => $staging_dir ) {
+		$base_dir = libresign_theme_site_fragment_storage_base_dir( $fragment_type );
+		libresign_theme_site_fragment_recursive_delete( $base_dir );
+		rename( $staging_dir, $base_dir );
+	}
+
 	return $collected['summary'];
+}
+
+function libresign_theme_site_fragment_storage_error( $fragment_type ) {
+	return new WP_Error(
+		'libresign_theme_site_fragment_storage_failed',
+		sprintf(
+			/* translators: %s: fragment type. */
+			__( 'Unable to create local storage for the %s fragment.', 'libresign' ),
+			$fragment_type
+		)
+	);
+}
+
+function libresign_theme_site_fragment_discard_staging( $staging_dirs ) {
+	foreach ( $staging_dirs as $staging_dir ) {
+		libresign_theme_site_fragment_recursive_delete( $staging_dir );
+	}
 }
 
 /**
