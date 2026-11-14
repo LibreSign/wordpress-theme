@@ -148,9 +148,8 @@ function libresign_theme_render_lost_password_form() {
  * - Any other account page → WooCommerce my-account shortcode (which uses
  *   the woocommerce/myaccount/form-login.php template override for guests
  *   and the standard dashboard for logged-in users).
- * - Shop / checkout → prepend the SaaS onboarding block pattern.
  */
-function libresign_theme_prepend_saas_onboarding_to_content( $content ) {
+function libresign_theme_render_account_content( $content ) {
 	if ( is_admin() || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
@@ -178,23 +177,9 @@ function libresign_theme_prepend_saas_onboarding_to_content( $content ) {
 		return function_exists( 'do_shortcode' ) ? do_shortcode( '[woocommerce_my_account]' ) : $content;
 	}
 
-	$should_prepend = ( function_exists( 'is_shop' ) && is_shop() )
-		|| ( function_exists( 'is_checkout' ) && is_checkout() );
-
-	if ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
-		$should_prepend = true;
-	}
-
-	if ( $should_prepend ) {
-		$onboarding_block = '<!-- wp:pattern {"slug":"libresign/saas-onboarding"} /-->';
-		if ( false === strpos( $content, 'libresign/saas-onboarding' ) ) {
-			$content = do_blocks( $onboarding_block ) . $content;
-		}
-	}
-
 	return $content;
 }
-add_filter( 'the_content', 'libresign_theme_prepend_saas_onboarding_to_content', 5 );
+add_filter( 'the_content', 'libresign_theme_render_account_content', 5 );
 
 // ---------------------------------------------------------------------------
 // Direct /lost-password/ route handler

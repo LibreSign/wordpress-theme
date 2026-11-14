@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "100daeaa732ad02c2952242d18b7d8f1",
+    "content-hash": "a4c1e95fb5e6b3f2fa1b051e281e06c0",
     "packages": [],
     "packages-dev": [
         {
@@ -209,6 +209,16 @@
                 }
             ],
             "time": "2024-06-24T20:46:46+00:00"
+        },
+        {
+            "name": "pronamic/woocommerce-subscriptions",
+            "version": "9.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pronamic/woocommerce-subscriptions.git",
+                "reference": "0a2c496cd263811707caa37c8bf01ffa450c6009"
+            },
+            "type": "wordpress-plugin"
         },
         {
             "name": "roots/wordpress",

@@ -165,14 +165,14 @@ final class AccountTest extends WP_UnitTestCase {
 	public function test_keeps_the_content_of_other_pages() {
 		$this->in_the_loop_of( home_url() );
 
-		$this->assertSame( '<p>Page</p>', libresign_theme_prepend_saas_onboarding_to_content( '<p>Page</p>' ) );
+		$this->assertSame( '<p>Page</p>', libresign_theme_render_account_content( '<p>Page</p>' ) );
 	}
 
 	public function test_keeps_the_content_outside_the_loop() {
 		add_filter( 'woocommerce_is_account_page', '__return_true' );
 		$this->go_to( home_url() );
 
-		$this->assertSame( '<p>Page</p>', libresign_theme_prepend_saas_onboarding_to_content( '<p>Page</p>' ) );
+		$this->assertSame( '<p>Page</p>', libresign_theme_render_account_content( '<p>Page</p>' ) );
 	}
 
 	public function test_keeps_the_content_in_the_admin() {
@@ -180,7 +180,7 @@ final class AccountTest extends WP_UnitTestCase {
 		$this->in_the_loop_of( home_url() );
 		set_current_screen( 'dashboard' );
 
-		$this->assertSame( '<p>Page</p>', libresign_theme_prepend_saas_onboarding_to_content( '<p>Page</p>' ) );
+		$this->assertSame( '<p>Page</p>', libresign_theme_render_account_content( '<p>Page</p>' ) );
 	}
 
 	/**
@@ -206,7 +206,7 @@ final class AccountTest extends WP_UnitTestCase {
 		add_filter( 'woocommerce_is_account_page', '__return_true' );
 		$this->in_the_loop_of( add_query_arg( $query, home_url( '/' ) ) );
 
-		return libresign_theme_prepend_saas_onboarding_to_content( '' );
+		return libresign_theme_render_account_content( '' );
 	}
 
 	private function in_the_loop_of( $url ) {

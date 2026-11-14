@@ -32,6 +32,7 @@ tests_add_filter(
 	'muplugins_loaded',
 	static function () use ( $test_plugins_dir ) {
 		require $test_plugins_dir . '/woocommerce/woocommerce.php';
+		require $test_plugins_dir . '/woocommerce-subscriptions/woocommerce-subscriptions.php';
 		register_theme_directory( dirname( __DIR__, 2 ) );
 	}
 );
@@ -39,7 +40,10 @@ tests_add_filter(
 tests_add_filter(
 	'pre_option_active_plugins',
 	static function () {
-		return array( 'woocommerce/woocommerce.php' );
+		return array(
+			'woocommerce/woocommerce.php',
+			'woocommerce-subscriptions/woocommerce-subscriptions.php',
+		);
 	}
 );
 
