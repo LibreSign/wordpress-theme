@@ -422,13 +422,20 @@ function libresign_theme_site_fragment_load_artifact( $fragment_type ) {
 	return null;
 }
 
+function libresign_theme_site_fragment_is_excluded_page() {
+	return ( function_exists( 'is_checkout' ) && is_checkout() )
+		|| ( function_exists( 'is_order_received_page' ) && is_order_received_page() )
+		|| ( function_exists( 'is_account_page' ) && is_account_page() )
+		|| libresign_theme_is_direct_lost_password_route();
+}
+
 /**
  * Enqueue locally stored site fragment assets.
  *
  * @return void
  */
 function libresign_theme_site_fragment_enqueue_assets() {
-	if ( is_admin() ) {
+	if ( is_admin() || libresign_theme_site_fragment_is_excluded_page() ) {
 		return;
 	}
 
@@ -488,7 +495,7 @@ function libresign_theme_render_site_fragment( $fragment_type ) {
  */
 function libresign_theme_replace_site_fragment_template_part( $block_content, $block ) {
 	$slug = isset( $block['attrs']['slug'] ) ? (string) $block['attrs']['slug'] : '';
-	if ( ! in_array( $slug, libresign_theme_site_fragment_supported_types(), true ) ) {
+	if ( ! in_array( $slug, libresign_theme_site_fragment_supported_types(), true ) || libresign_theme_site_fragment_is_excluded_page() ) {
 		return $block_content;
 	}
 
