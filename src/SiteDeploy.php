@@ -57,6 +57,10 @@ final class SiteDeploy {
 			&& self::workflow_name( $payload ) === 'Deploy';
 	}
 
+	public static function is_repository_name( string $repository ): bool {
+		return 1 === preg_match( '/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repository );
+	}
+
 	public static function merged_pull_request( mixed $pull_requests ): int {
 		if ( ! is_array( $pull_requests ) ) {
 			return 0;

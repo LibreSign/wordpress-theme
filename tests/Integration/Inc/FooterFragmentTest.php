@@ -2,11 +2,15 @@
 
 namespace LibreSign\WordPressTheme\Tests\Integration\Inc;
 
+use donatj\MockWebServer\MockWebServer;
+use donatj\MockWebServer\Response;
 use LibreSign\WordPressTheme\Tests\Support\StaticSite;
 use WP_Error;
 use WP_UnitTestCase;
 
 final class FooterFragmentTest extends WP_UnitTestCase {
+
+	private static $internal_service;
 
 	private $site;
 
@@ -14,14 +18,25 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		parent::set_up();
 
 		$this->site = new StaticSite();
+		set_theme_mod( 'libresign_site_origin', $this->site->origin() );
 	}
 
 	public function tear_down() {
 		foreach ( array( 'header', 'footer' ) as $fragment_type ) {
 			libresign_theme_site_fragment_recursive_delete( libresign_theme_site_fragment_storage_base_dir( $fragment_type ) );
 		}
+		libresign_theme_site_fragment_recursive_delete( $this->outside_folder() );
 
 		parent::tear_down();
+	}
+
+	public static function tear_down_after_class() {
+		if ( null !== self::$internal_service ) {
+			self::$internal_service->stop();
+			self::$internal_service = null;
+		}
+
+		parent::tear_down_after_class();
 	}
 
 	public function test_stores_each_fragment_type_in_its_own_folder() {
@@ -62,6 +77,11 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		$this->assertWPError( $error );
 		$this->assertSame( 'libresign_theme_site_fragment_http_status', $error->get_error_code() );
 		$this->assertSame( 404, $error->get_error_data()['status'] );
+	}
+
+	public function test_does_not_fetch_a_local_address_other_than_the_static_site() {
+		$this->assertWPError( libresign_theme_site_fragment_fetch_url( $this->internal_url() ) );
+		$this->assertNull( self::$internal_service->getLastRequest() );
 	}
 
 	public function test_a_transport_failure_is_an_error() {
@@ -146,6 +166,59 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		$this->assertSame( 500, $error->get_error_data()['status'] );
 	}
 
+	public function test_does_not_fetch_an_asset_from_another_host() {
+		$this->publish_site();
+		$this->site->serve( '/fragments/header', '<header data-fragment-css="' . $this->internal_url() . '" data-fragment-js="' . $this->site->origin() . '/assets/header.js"></header>' );
+
+		$error = libresign_theme_site_fragment_collect_artifacts( $this->site->origin(), array( 'header' ) );
+
+		$this->assertWPError( $error );
+		$this->assertSame( 'libresign_theme_site_fragment_missing_assets', $error->get_error_code() );
+		$this->assertNull( self::$internal_service->getLastRequest() );
+	}
+
+	public function test_fetches_a_root_relative_asset_from_the_static_site() {
+		$this->publish_site();
+		$this->site->serve( '/fragments/footer', '<footer data-fragment-css="/assets/footer.css" data-fragment-js="/assets/footer.js"></footer>' );
+
+		$collected = libresign_theme_site_fragment_collect_artifacts( $this->site->origin(), array( 'footer' ) );
+
+		$this->assertSame( $this->site->origin() . '/assets/footer.css', $collected['artifacts'][0]['css_url'] );
+		$this->assertSame( 'footer{}', $collected['artifacts'][0]['css'] );
+	}
+
+	public function test_a_locale_linked_outside_the_fragments_folder_is_not_stored() {
+		wp_mkdir_p( $this->outside_folder() );
+		$this->publish_site();
+		$origin = $this->site->origin();
+		$header = '<header data-fragment-css="' . $origin . '/assets/header.css" data-fragment-js="' . $origin . '/assets/header.js"><a href="/fragments/..%2Foutside/header">x</a></header>';
+		$this->site->serve( '/fragments/header', $header );
+		$this->site->serve( '/fragments/..%2Foutside/header', $header );
+
+		libresign_theme_sync_site_fragments_from_origin( $origin );
+
+		$this->assertFileDoesNotExist( $this->outside_folder() . '/header.html' );
+		$this->assertFileExists( libresign_theme_site_fragment_storage_base_dir( 'header' ) . '/default/header.html' );
+	}
+
+	public function test_refuses_to_store_a_fragment_outside_its_folder_and_keeps_the_stored_ones() {
+		wp_mkdir_p( $this->outside_folder() );
+		$this->store( array( array( 'header', 'default', '<header>stored</header>' ) ) );
+
+		$result = libresign_theme_site_fragment_persist_artifacts(
+			array(
+				'artifacts' => array( $this->artifact( 'header', '../outside', '<header>new</header>' ) ),
+				'summary'   => array(),
+			)
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'libresign_theme_site_fragment_storage_failed', $result->get_error_code() );
+		$this->assertFileDoesNotExist( $this->outside_folder() . '/header.html' );
+		$this->assertSame( '<header>stored</header>', file_get_contents( libresign_theme_site_fragment_storage_base_dir( 'header' ) . '/default/header.html' ) );
+		$this->assertDirectoryDoesNotExist( libresign_theme_site_fragment_storage_base_dir( 'header' ) . '-staging' );
+	}
+
 	public function test_a_missing_asset_stops_the_sync() {
 		$this->publish_site();
 		$this->site->serve( '/assets/footer.js', 'gone', 404 );
@@ -215,21 +288,7 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		$artifacts = array();
 
 		foreach ( $fragments as list( $fragment_type, $locale_key, $html ) ) {
-			$artifacts[] = array(
-				'fragment_type' => $fragment_type,
-				'locale'        => 'default' === $locale_key ? '' : $locale_key,
-				'locale_key'    => $locale_key,
-				'fragment_url'  => '',
-				'css_url'       => '',
-				'js_url'        => '',
-				'generated_at'  => '',
-				'source_sha'    => '',
-				'source_url'    => '',
-				'html'          => $html,
-				'css'           => '',
-				'js'            => '',
-				'version'       => '1',
-			);
+			$artifacts[] = $this->artifact( $fragment_type, $locale_key, $html );
 		}
 
 		libresign_theme_site_fragment_persist_artifacts(
@@ -238,6 +297,37 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 				'summary'   => array(),
 			)
 		);
+	}
+
+	private function artifact( $fragment_type, $locale_key, $html ) {
+		return array(
+			'fragment_type' => $fragment_type,
+			'locale'        => 'default' === $locale_key ? '' : $locale_key,
+			'locale_key'    => $locale_key,
+			'fragment_url'  => '',
+			'css_url'       => '',
+			'js_url'        => '',
+			'generated_at'  => '',
+			'source_sha'    => '',
+			'source_url'    => '',
+			'html'          => $html,
+			'css'           => '',
+			'js'            => '',
+			'version'       => '1',
+		);
+	}
+
+	private function outside_folder() {
+		return wp_upload_dir()['basedir'] . '/outside';
+	}
+
+	private function internal_url() {
+		if ( null === self::$internal_service ) {
+			self::$internal_service = new MockWebServer();
+			self::$internal_service->start();
+		}
+
+		return self::$internal_service->setResponseOfPath( '/internal', new Response( 'internal' ) );
 	}
 
 	private function publish_site() {

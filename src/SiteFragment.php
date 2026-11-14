@@ -6,6 +6,8 @@ final class SiteFragment {
 
 	public const DEFAULT_LOCALE_KEY = 'default';
 
+	private const LANGUAGE_TAG_PATTERN = '/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/';
+
 	public static function origin( string $origin ): string {
 		return rtrim( trim( $origin ), '/' );
 	}
@@ -30,7 +32,9 @@ final class SiteFragment {
 			}
 		}
 
-		return implode( '-', $parts );
+		$tag = implode( '-', $parts );
+
+		return 1 === preg_match( self::LANGUAGE_TAG_PATTERN, $tag ) ? $tag : '';
 	}
 
 	public static function storage_key( string $locale ): string {
@@ -48,7 +52,7 @@ final class SiteFragment {
 	/**
 	 * @return array{css: string, js: string}|null
 	 */
-	public static function asset_urls( string $html ): ?array {
+	public static function asset_urls( string $html, string $origin ): ?array {
 		if (
 			! preg_match( '/\bdata-fragment-css=("|\')([^"\']+)\1/i', $html, $css_matches )
 			|| ! preg_match( '/\bdata-fragment-js=("|\')([^"\']+)\1/i', $html, $js_matches )
@@ -56,10 +60,39 @@ final class SiteFragment {
 			return null;
 		}
 
+		$css_url = self::same_origin_url( $origin, $css_matches[2] );
+		$js_url  = self::same_origin_url( $origin, $js_matches[2] );
+		if ( '' === $css_url || '' === $js_url ) {
+			return null;
+		}
+
 		return array(
-			'css' => $css_matches[2],
-			'js'  => $js_matches[2],
+			'css' => $css_url,
+			'js'  => $js_url,
 		);
+	}
+
+	public static function same_origin_url( string $origin, string $url ): string {
+		$origin = self::origin( $origin );
+		$url    = trim( $url );
+
+		if ( str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' ) ) {
+			$url = $origin . $url;
+		}
+
+		$origin_parts = parse_url( $origin );
+		$url_parts    = parse_url( $url );
+		if ( ! is_array( $origin_parts ) || ! is_array( $url_parts ) || empty( $origin_parts['host'] ) ) {
+			return '';
+		}
+
+		foreach ( array( 'scheme', 'host', 'port' ) as $component ) {
+			if ( strtolower( (string) ( $origin_parts[ $component ] ?? '' ) ) !== strtolower( (string) ( $url_parts[ $component ] ?? '' ) ) ) {
+				return '';
+			}
+		}
+
+		return $url;
 	}
 
 	/**
