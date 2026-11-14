@@ -17,6 +17,8 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 	}
 
 	public function tear_down() {
+		$_SERVER['REQUEST_URI'] = '';
+
 		foreach ( array( 'header', 'footer' ) as $fragment_type ) {
 			libresign_theme_site_fragment_recursive_delete( libresign_theme_site_fragment_storage_base_dir( $fragment_type ) );
 		}
@@ -209,6 +211,39 @@ final class FooterFragmentTest extends WP_UnitTestCase {
 		$this->assertSame( libresign_theme_site_fragment_storage_base_url( 'header' ) . '/default/header.css', wp_styles()->registered['libresign-site-header-fragment']->src );
 		$this->assertSame( libresign_theme_site_fragment_storage_base_url( 'footer' ) . '/en-US/footer.js', wp_scripts()->registered['libresign-site-footer-fragment']->src );
 		$this->assertSame( 'module', wp_scripts()->get_data( 'libresign-site-header-fragment', 'type' ) );
+	}
+
+	/**
+	 * @dataProvider provide_pages_without_the_site_fragments
+	 */
+	public function test_keeps_the_theme_header_and_footer_on_a_page_with_account_or_payment_data( $page ) {
+		$this->store(
+			array(
+				array( 'header', 'default', '<header>stored</header>' ),
+				array( 'footer', 'default', '<footer>stored</footer>' ),
+			)
+		);
+		$page();
+		wp_dequeue_style( 'libresign-site-header-fragment' );
+		wp_dequeue_script( 'libresign-site-footer-fragment' );
+
+		do_action( 'wp_enqueue_scripts' );
+
+		$this->assertSame( '<header>theme</header>', apply_filters( 'render_block_core/template-part', '<header>theme</header>', array( 'attrs' => array( 'slug' => 'header' ) ) ) );
+		$this->assertSame( '<footer>theme</footer>', apply_filters( 'render_block_core/template-part', '<footer>theme</footer>', array( 'attrs' => array( 'slug' => 'footer' ) ) ) );
+		$this->assertFalse( wp_style_is( 'libresign-site-header-fragment' ) );
+		$this->assertFalse( wp_script_is( 'libresign-site-footer-fragment' ) );
+	}
+
+	public static function provide_pages_without_the_site_fragments() {
+		yield 'the checkout'            => array( static fn () => add_filter( 'woocommerce_is_checkout', '__return_true' ) );
+		yield 'the order received page' => array( static fn () => add_filter( 'woocommerce_is_order_received_page', '__return_true' ) );
+		yield 'my account and login'    => array( static fn () => add_filter( 'woocommerce_is_account_page', '__return_true' ) );
+		yield 'the lost password route' => array(
+			static function () {
+				$_SERVER['REQUEST_URI'] = '/lost-password/';
+			},
+		);
 	}
 
 	private function store( $fragments ) {
